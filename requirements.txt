@@ -1,0 +1,10 @@
+# Dev Env
+autopep8==2.0.4
+isort==5.13.2
+coverage==7.5.1
+flake8==7.1.0
+
+# VSCode - Unit test
+packaging==25.0 # required since .vscode\extensions\ms-python.python-2025.5.2025042501-win32-x64\python_files\unittestadapter\execution.py is not selfcontained
+
+# Project

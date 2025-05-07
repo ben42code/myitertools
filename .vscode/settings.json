@@ -1,0 +1,40 @@
+{
+    "python.testing.unittestEnabled": true,
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "tests",
+        "-p",
+        "*_test.py",
+        "-t",
+        "."
+    ],
+    "python.testing.pytestEnabled": false,
+    "[python]": {
+        "diffEditor.ignoreTrimWhitespace": false,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "ms-python.autopep8",
+        "editor.formatOnType": true,
+        "editor.formatOnSave": true,
+        "editor.wordBasedSuggestions": "off",
+    },
+    "autopep8.args": [],
+    "isort.args": [
+        "--profile",
+        "black",
+        "--line-length",
+        "200"
+    ],
+    "autopep8.importStrategy": "fromEnvironment",
+    "isort.importStrategy": "fromEnvironment",
+    "python.analysis.extraPaths":[
+        "${workspaceFolder}/src",
+    ],
+    "python.autoComplete.extraPaths":[
+        "${workspaceFolder}/src",
+    ],
+    "coverage-gutters.showGutterCoverage": false,
+    "coverage-gutters.showLineCoverage": true,
+}

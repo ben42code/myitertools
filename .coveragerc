@@ -1,0 +1,11 @@
+[coverage:run]
+source_pkgs = myproject
+omit = __init__.py
+branch = true
+
+[coverage:report]
+skip_empty = true
+show_missing = true
+
+[coverage:lcov]
+output = lcov.info
