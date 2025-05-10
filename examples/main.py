@@ -1,33 +1,40 @@
-import asyncio
+from itertools import islice
 from typing import NamedTuple
 
-from helpers.measureperf import AMeasurePerf, MeasurePerf
+from myitertools import islice_extended
 
-from myproject.fibonacci import fibo, fibo_async
+input = list(range(10))
 
 
-async def main():
+class TestCase(NamedTuple):
+    start: int | None
+    stop: int | None
+    step: int | None
 
-    class Timing(NamedTuple):
-        sync_t: float
-        async_t: float
 
-    lastTiming = None
-    for n in range(0, 15):
+TestCases = [
+    # fmt: off
+    TestCase(start=0,   stop=5,     step=1),
+    TestCase(start=5,   stop=0,     step=-1),
+    TestCase(start=-10, stop=-5,    step=1),
+    TestCase(start=-10, stop=5,     step=1),
+    TestCase(start=0,   stop=-5,    step=1),
+    TestCase(start=-5,  stop=-10,   step=-1),
+    TestCase(start=-5,  stop=0,     step=-1),
+    TestCase(start=5,   stop=-10,   step=-1),
+    # fmt: on
+]
 
-        timing = Timing(
-            sync_t=MeasurePerf(fibo, n),
-            async_t=await AMeasurePerf(fibo_async, n)
-        )
+print(f"Input: {input}")
+print("=" * 40)
 
-        if lastTiming is None:
-            lastTiming = timing
-
-        print(f'''Fibo/AFibo({n}) took [{timing.sync_t:.8f}s]({(timing.sync_t*100/lastTiming.sync_t-100):+.2f}%)/[{timing.async_t:.8f}s]({(timing.async_t*100/lastTiming.async_t-100):+.2f}%) to execute''')    # noqa: E501
-
-        lastTiming = timing
-
-if __name__ == "__main__":
-    asyncio.run(main())
+for testcase in TestCases:
+    print(f"Input: {testcase}")
+    print(f"myitertools.islice_extended Output: {list(islice_extended(input, *testcase))}")
+    try:
+        print(f"itertools.islice            Output: {list(islice(input, *testcase))}")
+    except Exception as e:
+        print(f"itertools.islice            Error: {e}")
+    print("-" * 40)
 
 exit()
