@@ -51,7 +51,7 @@ class Islice_extended_Test(unittest.TestCase):
             [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
         )):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with nullcontext() or self.subTest(f"index:{index:02d} iterable:{iterable} start:{stop} stop:{stop}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} iterable:{iterable} start:{start} stop:{stop}"):
 
                 # arrange/act
                 iteratorFromSlice = islice_extended(iterable, start, stop)
@@ -67,7 +67,7 @@ class Islice_extended_Test(unittest.TestCase):
             [None, -7, -3, -1, 1, 3, 7],                        # step
         )):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with nullcontext() or self.subTest(f"index:{index:02d} iterable:{iterable} start:{stop} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} iterable:{iterable} start:{start} stop:{stop} step:{step}"):
 
                 # arrange/act
                 iteratorFromSlice = islice_extended(iterable, start, stop, step)
@@ -125,7 +125,7 @@ class Islice_extended_Test(unittest.TestCase):
             [None, -7, -3, -1, 1, 3, 7],                        # step
         )):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with nullcontext() or self.subTest(f"index:{index:02d} iterable:{iterable} start:{stop} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} iterable:{iterable} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorMock = build_IteratorMock(iterable)
