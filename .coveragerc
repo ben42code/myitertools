@@ -1,5 +1,5 @@
 [coverage:run]
-source_pkgs = myproject
+source_pkgs = myitertools
 omit = __init__.py
 branch = true
 
