@@ -69,17 +69,19 @@ def islice_extended(iterable: Iterable[T], *args) -> Iterator[T]:
         # we need to retrieve the whole content
         # negative indexes are relative to the end of the stream
         data = list(iterable)
+        data = data[rawSlice]
         # TODO: improve memory consumption
-        # - do not store elements that wouldn't be yielded
         # - do not keep elements that have been yielded
-        yield from data[sanitizedSlice]
+        yield from data
     elif sanitizedSlice.step < 0:  # step < 0
+        # since start index can exceed that iterable size, we can't be too smart
+
         # negative step means we only need all the data up to the start element included
         data = list(itertools.islice(iterable, sanitizedSlice.start + 1))
+        data = data[rawSlice]
         # TODO: improve memory consumption
-        # - do not store elements that wouldn't be yielded
         # - do not keep elements that have been yielded
-        yield from data[sanitizedSlice]
+        yield from data
     else:   # start >= 0, stop is None or >= 0, step > 0
         # Those cases are supported by itertools.islice
         yield from itertools.islice(iterable, sanitizedSlice.start, sanitizedSlice.stop, sanitizedSlice.step)
