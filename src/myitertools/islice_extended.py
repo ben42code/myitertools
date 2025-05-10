@@ -32,6 +32,7 @@ def islice_extended(iterable: Iterable[T], *args) -> Iterator[T]:
             - until StopIteration is raised if start or stop are negative.
     """
     rawSlice = slice(*args)
+
     step = 1 if rawSlice.step is None else rawSlice.step.__int__()
 
     if step == 0:
@@ -65,22 +66,21 @@ def islice_extended(iterable: Iterable[T], *args) -> Iterator[T]:
     #     if sanitizedSlice.step < 0 and sanitizedSlice.start <= sanitizedSlice.stop:
     #         return
 
-    # if start < 0 or (stop is None and step > 0) or (stop is not None and stop < 0):
     if sanitizedSlice.start < 0 or (sanitizedSlice.stop is not None and sanitizedSlice.stop < 0):
         # we need to retrieve the whole content
         # negative indexes are relative to the end of the stream
-        data = list(iterable)
-        data = deque(data[sanitizedSlice])
-        while len(data) > 0:
-            yield data.popleft()
-    elif sanitizedSlice.step < 0:  # step < 0
-        # since start index can exceed that iterable size, we can't be too smart
-
+        newDataSource = list(iterable)
+    elif sanitizedSlice.step < 0:
         # negative step means we only need all the data up to the start element included
-        data = list(itertools.islice(iterable, sanitizedSlice.start + 1))
-        data = deque(data[sanitizedSlice])
-        while len(data) > 0:
-            yield data.popleft()
+        # since start index can exceed that iterable size, we can't be too smart...hence this brute force approach
+        newDataSource = list(itertools.islice(iterable, sanitizedSlice.start + 1))
+    else:
+        newDataSource = None
+
+    if newDataSource is not None:
+        newDataSource = deque(newDataSource[rawSlice])
+        while len(newDataSource) > 0:
+            yield newDataSource.popleft()
     else:   # start >= 0, stop is None or >= 0, step > 0
         # Those cases are supported by itertools.islice
-        yield from itertools.islice(iterable, sanitizedSlice.start, sanitizedSlice.stop, sanitizedSlice.step)
+        yield from itertools.islice(iterable, *args)
