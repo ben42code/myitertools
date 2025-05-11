@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "ben42code.myitertools"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { email="ben42code@gmail.com" },
 ]
