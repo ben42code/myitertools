@@ -17,5 +17,3 @@ Ouput:
 ```
 Result: [9, 8, 7, 6]
 ```
-
-Dev related information: [README.dev](README.dev.md)
