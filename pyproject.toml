@@ -1,0 +1,24 @@
+[build-system]
+requires = ["flit_core >= 3.12.0, <4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "ben42code.myitertools"
+version = "0.0.3"
+authors = [
+  { email="ben42code@gmail.com" },
+]
+description = "Providing some additional capabilities on top of itertools."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/ben42code/myitertools"
