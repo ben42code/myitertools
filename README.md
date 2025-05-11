@@ -1,4 +1,4 @@
-# MyItertools
+# ben42code.myitertools
 Providing some additional capabilities to itertools.
 
 # Onboarding / Reminder

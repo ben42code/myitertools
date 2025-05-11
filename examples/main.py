@@ -1,7 +1,7 @@
 from itertools import islice
 from typing import NamedTuple
 
-from myitertools import islice_extended
+from ben42code.myitertools import islice_extended
 
 input = list(range(10))
 

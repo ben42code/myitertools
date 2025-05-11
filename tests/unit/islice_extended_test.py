@@ -3,7 +3,7 @@ import unittest
 from contextlib import nullcontext
 from unittest.mock import Mock
 
-from myitertools import islice_extended
+from ben42code.myitertools import islice_extended
 
 
 def build_IteratorMock(side_effect) -> Mock:
