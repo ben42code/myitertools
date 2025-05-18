@@ -28,6 +28,36 @@ def normalizeSlice(iterableSize, start, stop, step):
     return start, stop, step
 
 
+def expectedIterationsForNElements(iterableSize, start, stop, step, numberOfElements: int | None = None) -> int:
+    """
+    This function is used to determine the expected number of iterations after some elements have been consumed.
+    It is used to test the behavior of the islice_extended function when it is called with a specific set of parameters.
+    """
+    if numberOfElements == 0:
+        return 0
+
+    stopWasNotNone = stop is not None
+    start, stop, step = normalizeSlice(iterableSize, start, stop, step)
+
+    if start < 0 or stop < 0 and stopWasNotNone:
+        expectedCallCount = iterableSize + 1
+    elif step < 0:
+        expectedCallCount = min(start + 1, iterableSize + 1)
+    elif start >= 0 and stop >= 0 and step > 0:
+        iteratorMockRegularIslice = build_IteratorMock(range(iterableSize))
+        iterator_islice = itertools.islice(iteratorMockRegularIslice, start, stop, step)
+        while numberOfElements is None or numberOfElements > 0:
+            try:
+                next(iterator_islice)
+                if numberOfElements is not None:
+                    numberOfElements -= 1
+            except StopIteration:
+                break
+        expectedCallCount = iteratorMockRegularIslice.__next__.call_count
+
+    return expectedCallCount
+
+
 class Islice_extended_Test(unittest.TestCase):
 
     def test_withStop_expectedValues(self):
@@ -186,21 +216,7 @@ class Islice_extended_Test(unittest.TestCase):
                 # arrange
                 iteratorMock = build_IteratorMock(range(iterableSize))
                 iteratorFromSlice = islice_extended(iteratorMock, start, stop, step)
-
-                stopWasNotNone = stop is not None
-                start, stop, step = normalizeSlice(iterableSize, start, stop, step)
-
-                if start < 0 or stop < 0 and stopWasNotNone:
-                    expectedCallCount = iterableSize + 1
-                elif step < 0:
-                    expectedCallCount = min(start + 1, iterableSize + 1)
-                elif start >= 0 and stop >= 0 and step > 0:
-                    iteratorMockRegularIslice = build_IteratorMock(range(iterableSize))
-                    try:
-                        next(itertools.islice(iteratorMockRegularIslice, start, stop, step))
-                    except StopIteration:
-                        pass
-                    expectedCallCount = iteratorMockRegularIslice.__next__.call_count
+                expectedCallCount = expectedIterationsForNElements(iterableSize, start, stop, step, numberOfElements=1)
 
                 # act
                 try:
@@ -259,18 +275,7 @@ class Islice_extended_Test(unittest.TestCase):
                 # arrange
                 iteratorMock = build_IteratorMock(range(iterableSize))
                 iteratorFromSlice = islice_extended(iteratorMock, start, stop, step)
-
-                stopWasNotNone = stop is not None
-                start, stop, step = normalizeSlice(iterableSize, start, stop, step)
-
-                if start < 0 or stop < 0 and stopWasNotNone:
-                    expectedCallCount = iterableSize + 1
-                elif step < 0:
-                    expectedCallCount = min(start + 1, iterableSize + 1)
-                elif start >= 0 and stop >= 0 and step > 0:
-                    iteratorMockIslice = build_IteratorMock(range(iterableSize))
-                    list(itertools.islice(iteratorMockIslice, start, stop, step))
-                    expectedCallCount = iteratorMockIslice.__next__.call_count
+                expectedCallCount = expectedIterationsForNElements(iterableSize, start, stop, step)
 
                 # act
                 list(iteratorFromSlice)
