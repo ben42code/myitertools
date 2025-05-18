@@ -350,6 +350,7 @@ class Islice_extended_Test(unittest.TestCase):
             # # negative step => need to iterate until element with start index included
             [ 3,    1, -1, [0, 0, 1, 0, 1, 1, 1, 1, 1, 1]],   # noqa: E201
             [ 3, None, -1, [1, 1, 1, 0, 1, 1, 1, 1, 1, 1]],   # noqa: E201
+            [ 6, None, -2, [1, 0, 1, 0, 1, 0, 0, 1, 1, 1]],   # noqa: E201
 
             # # guaranteed empty result...but still iterate over the source to keep it simple for the caller
             [ 4,    6, -1, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],   # negative step => iterate until element with start index included   # noqa: E201
@@ -388,15 +389,8 @@ class Islice_extended_Test(unittest.TestCase):
                 iteratorSize = 10
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
                 expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step, numberOfElements=1)
-                expectedWeakReferencesValidity = list()
-                for elementIndex in range(iteratorSize):
-                    if elementIndex < expectedConsumedElements:
-                        if elementIndex in set(list(range(10))[start:stop:step][1:None]):
-                            expectedWeakReferencesValidity.append(True)
-                        else:
-                            expectedWeakReferencesValidity.append(False)
-                    else:
-                        expectedWeakReferencesValidity.append(True)
+                expectedReturnedIndexes = set(list(range(10))[start:stop:step][1:None])
+                expectedWeakReferencesValidity = list(map(lambda index: (index in expectedReturnedIndexes) if index < expectedConsumedElements else True, range(iteratorSize)))
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
@@ -424,6 +418,7 @@ class Islice_extended_Test(unittest.TestCase):
             # # negative step => need to iterate until element with start index included
             [ 3,    1, -1, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],  # noqa: E201
             [ 3, None, -1, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],  # noqa: E201
+            [ 6, None, -2, [0, 0, 0, 0, 0, 0, 0, 1, 1, 1]],  # noqa: E201
 
             # # guaranteed empty result...but still iterate over the source to keep it simple for the caller
             [ 4,    6, -1, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],  # negative step => iterate until element with start index included   # noqa: E201
@@ -459,12 +454,7 @@ class Islice_extended_Test(unittest.TestCase):
                 iteratorSize = 10
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
                 expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step)
-                expectedWeakReferencesValidity = list()
-                for elementIndex in range(iteratorSize):
-                    if elementIndex < expectedConsumedElements:
-                        expectedWeakReferencesValidity.append(False)
-                    else:
-                        expectedWeakReferencesValidity.append(True)
+                expectedWeakReferencesValidity = list(map(lambda index: index >= expectedConsumedElements, range(iteratorSize)))
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
