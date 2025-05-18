@@ -172,6 +172,8 @@ class Islice_extended_Test(unittest.TestCase):
             # regular cases
             [10,    4,    7,  1,  4+1],
             [10,    4,    7,  2,  4+1],
+            [10,    4,    4,  5,    4],
+            [10,    9,   10,  1,  9+1],
 
             # negative start/stop => need the whole content
             [10,   -1,   10,  1, 11],
@@ -231,8 +233,10 @@ class Islice_extended_Test(unittest.TestCase):
         for index, (iterableSize, start, stop, step, expectedCallCount) in enumerate([
             # fmt: off
             # regular cases
-            [10,    4,    7,  1,  7],
-            [10,    4,    7,  2,  7],
+            [10,    4,    7,  1,  7],   # max(start, stop) iterations
+            [10,    4,    7,  2,  7],   # max(start, stop) iterations
+            [10,    4,    4,  5,  4],   # max(start, stop) iterations
+            [10,    9,   10,  1, 10],   # max(start, stop) iterations
 
             # negative start/stop => need the whole content
             [10,   -1,   10,  1, 11],
