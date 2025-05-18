@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 import itertools
 import unittest
+import weakref
+from collections import deque
 from contextlib import nullcontext
+from typing import Iterable, Iterator
 from unittest.mock import Mock
 
 from ben42code.myitertools import islice_extended
@@ -26,6 +31,48 @@ def normalizeSlice(iterableSize, start, stop, step):
         if step < 0:
             stop = -stop
     return start, stop, step
+
+
+class IteratorWithWeakReferences:
+    """
+    A custom iterator class that maintains weak references to its elements.
+    This class is designed to iterate over a collection of objects while also
+    keeping track of weak references to those objects. It can be used to monitor
+    the validity of the objects lifecycle during the iteration process.
+    Methods:
+        FROM_SIZE(size: int) -> IteratorWithWeakReferences:
+            A class method to create an instance of the iterator with a specified
+            number of `AnObject` instances.
+        weakReferencesValidityPerIndex() -> List[bool]:
+            Returns a list of booleans indicating the validity of the weak references
+            for each element in the original iterable.
+    Inner Classes:
+        AnObject:
+            A placeholder class used to create objects for the iterator.
+    """
+
+    class AnObject:
+        pass
+
+    @classmethod
+    def FROM_SIZE(cls, size: int) -> IteratorWithWeakReferences:
+        return cls([IteratorWithWeakReferences.AnObject() for _ in range(size)])
+
+    def __init__(self, iterable: Iterable):
+        self._data = deque(element for element in iterable)
+        self._weakReferences = [weakref.ref(a) for a in self._data]
+
+    def __iter__(self) -> Iterator:
+        return self
+
+    def __next__(self) -> AnObject:
+        if (len(self._data) == 0):
+            raise StopIteration
+
+        return self._data.popleft()
+
+    def weakReferencesValidityPerIndex(self) -> list[bool]:
+        return [wr() is not None for wr in self._weakReferences]
 
 
 def expectedIterationsForNElements(iterableSize, start, stop, step, numberOfElements: int | None = None) -> int:
@@ -286,6 +333,62 @@ class Islice_extended_Test(unittest.TestCase):
 
                 # assert
                 self.assertEqual(iteratorMock.__next__.call_count, expectedCallCount)
+
+    def test_withStartStopStepWithSingleConsumption_releaseItemsReferences(self):
+        for index, (start, stop, step) in enumerate(itertools.product(
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # start
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
+            [None, -7, -3, -1, 1, 3, 7],                        # step
+        )):
+            # remove nullcontext() for more details...but pay a dear execution time price in VSCode
+            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+
+                # arrange
+                iteratorSize = 10
+                iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
+                consumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step, numberOfElements=1)
+
+                # act
+                islice_iterator = islice_extended(iterator, start, stop, step)
+                try:
+                    next(islice_iterator)
+                except StopIteration:
+                    pass
+
+                # assert
+                for elementIndex, validityStatus in enumerate(iterator.weakReferencesValidityPerIndex()):
+                    if elementIndex < consumedElements:
+                        if elementIndex in set(list(range(10))[start:stop:step][1:None]):
+                            self.assertTrue(validityStatus)
+                        else:
+                            self.assertFalse(validityStatus)
+                    else:
+                        self.assertTrue(validityStatus)
+
+    def test_withStartStopStepWithFullConsumption_releaseItemsReferences(self):
+        for index, (start, stop, step) in enumerate(itertools.product(
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # start
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
+            [None, -7, -3, -1, 1, 3, 7],                        # step
+        )):
+            # remove nullcontext() for more details...but pay a dear execution time price in VSCode
+            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+
+                # arrange
+                iteratorSize = 10
+                iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
+                consumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step)
+
+                # act
+                islice_iterator = islice_extended(iterator, start, stop, step)
+                list(islice_iterator)
+
+                # assert
+                for elementIndex, validityStatus in enumerate(iterator.weakReferencesValidityPerIndex()):
+                    if elementIndex < consumedElements:
+                        self.assertFalse(validityStatus)
+                    else:
+                        self.assertTrue(validityStatus)
 
 
 if __name__ == '__main__':
