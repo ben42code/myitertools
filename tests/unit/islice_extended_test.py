@@ -334,19 +334,36 @@ class Islice_extended_Test(unittest.TestCase):
                 # assert
                 self.assertEqual(iteratorMock.__next__.call_count, expectedCallCount)
 
-    def test_withStartStopStepWithSingleConsumption_releaseItemsReferences(self):
-        for index, (start, stop, step) in enumerate(itertools.product(
-            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # start
-            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
-            [None, -7, -3, -1, 1, 3, 7],                        # step
-        )):
+    def test_withStartStopStepWithSingleConsumption_releaseItemsReferences_readable(self):
+        for index, (start, stop, step, expectedWeakReferencesValidity) in enumerate([
+            # fmt: off
+            # regular cases
+            [ 4,    7,  1, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],   # noqa: E201
+            [ 4,    7,  2, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],   # noqa: E201
+            [ 4,    4,  5, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],   # noqa: E201
+            [ 9,   10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],   # noqa: E201
+
+            # # negative start/stop => need the whole content
+            [-1,   10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],   # noqa: E201
+            [ 1,  -10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],   # noqa: E201
+
+            # # negative step => need to iterate until element with start index included
+            [ 3,    1, -1, [0, 0, 1, 0, 1, 1, 1, 1, 1, 1]],   # noqa: E201
+            [ 3, None, -1, [1, 1, 1, 0, 1, 1, 1, 1, 1, 1]],   # noqa: E201
+
+            # # guaranteed empty result...but still iterate over the source to keep it simple for the caller
+            [ 4,    6, -1, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],   # negative step => iterate until element with start index included   # noqa: E201
+            [ 6,    4,  1, [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]],   # itertools.islice behavior                                          # noqa: E201
+            [-4,   -6,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],   # negative start/stop => need the whole content                      # noqa: E201
+            [-6,   -4, -1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],   # negative start/stop => need the whole content                      # noqa: E201
+            # fmt: on
+        ]):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
             with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorSize = 10
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
-                consumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step, numberOfElements=1)
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
@@ -356,16 +373,9 @@ class Islice_extended_Test(unittest.TestCase):
                     pass
 
                 # assert
-                for elementIndex, validityStatus in enumerate(iterator.weakReferencesValidityPerIndex()):
-                    if elementIndex < consumedElements:
-                        if elementIndex in set(list(range(10))[start:stop:step][1:None]):
-                            self.assertTrue(validityStatus)
-                        else:
-                            self.assertFalse(validityStatus)
-                    else:
-                        self.assertTrue(validityStatus)
+                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
 
-    def test_withStartStopStepWithFullConsumption_releaseItemsReferences(self):
+    def test_withStartStopStepWithSingleConsumption_releaseItemsReferences_extensive(self):
         for index, (start, stop, step) in enumerate(itertools.product(
             [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # start
             [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
@@ -377,18 +387,91 @@ class Islice_extended_Test(unittest.TestCase):
                 # arrange
                 iteratorSize = 10
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
-                consumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step)
+                expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step, numberOfElements=1)
+                expectedWeakReferencesValidity = list()
+                for elementIndex in range(iteratorSize):
+                    if elementIndex < expectedConsumedElements:
+                        if elementIndex in set(list(range(10))[start:stop:step][1:None]):
+                            expectedWeakReferencesValidity.append(True)
+                        else:
+                            expectedWeakReferencesValidity.append(False)
+                    else:
+                        expectedWeakReferencesValidity.append(True)
+
+                # act
+                islice_iterator = islice_extended(iterator, start, stop, step)
+                try:
+                    next(islice_iterator)
+                except StopIteration:
+                    pass
+
+                # assert
+                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+
+    def test_withStartStopStepWithFullConsumption_releaseItemsReferences_readable(self):
+        for index, (start, stop, step, expectedWeakReferencesValidity) in enumerate([
+            # fmt: off
+            # regular cases
+            [ 4,    7,  1, [0, 0, 0, 0, 0, 0, 0, 1, 1, 1]],  # max(start, stop) iterations     # noqa: E201
+            [ 4,    7,  2, [0, 0, 0, 0, 0, 0, 0, 1, 1, 1]],  # max(start, stop) iterations     # noqa: E201
+            [ 4,    4,  5, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],  # max(start, stop) iterations     # noqa: E201
+            [ 9,   10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # max(start, stop) iterations     # noqa: E201
+
+            # # negative start/stop => need the whole content
+            [-1,   10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # noqa: E201
+            [ 1,  -10,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # noqa: E201
+
+            # # negative step => need to iterate until element with start index included
+            [ 3,    1, -1, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],  # noqa: E201
+            [ 3, None, -1, [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]],  # noqa: E201
+
+            # # guaranteed empty result...but still iterate over the source to keep it simple for the caller
+            [ 4,    6, -1, [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]],  # negative step => iterate until element with start index included   # noqa: E201
+            [ 6,    4,  1, [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]],  # itertools.islice behavior                                          # noqa: E201
+            [-4,   -6,  1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # negative start/stop => need the whole content                      # noqa: E201
+            [-6,   -4, -1, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],  # negative start/stop => need the whole content                      # noqa: E201
+            # fmt: on
+        ]):
+            # remove nullcontext() for more details...but pay a dear execution time price in VSCode
+            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+
+                # arrange
+                iteratorSize = 10
+                iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
                 list(islice_iterator)
 
                 # assert
-                for elementIndex, validityStatus in enumerate(iterator.weakReferencesValidityPerIndex()):
-                    if elementIndex < consumedElements:
-                        self.assertFalse(validityStatus)
+                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+
+    def test_withStartStopStepWithFullConsumption_releaseItemsReferences_extensive(self):
+        for index, (start, stop, step) in enumerate(itertools.product(
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # start
+            [None, -15, -10, -9, -4, -1, 0, 1, 4, 9, 10, 15],   # stop
+            [None, -7, -3, -1, 1, 3, 7],                        # step
+        )):
+            # remove nullcontext() for more details...but pay a dear execution time price in VSCode
+            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+
+                # arrange
+                iteratorSize = 10
+                iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
+                expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step)
+                expectedWeakReferencesValidity = list()
+                for elementIndex in range(iteratorSize):
+                    if elementIndex < expectedConsumedElements:
+                        expectedWeakReferencesValidity.append(False)
                     else:
-                        self.assertTrue(validityStatus)
+                        expectedWeakReferencesValidity.append(True)
+
+                # act
+                islice_iterator = islice_extended(iterator, start, stop, step)
+                list(islice_iterator)
+
+                # assert
+                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
 
 
 if __name__ == '__main__':
