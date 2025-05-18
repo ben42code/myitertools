@@ -360,7 +360,7 @@ class Islice_extended_Test(unittest.TestCase):
             # fmt: on
         ]):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorSize = 10
@@ -383,7 +383,7 @@ class Islice_extended_Test(unittest.TestCase):
             [None, -7, -3, -1, 1, 3, 7],                        # step
         )):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorSize = 10
@@ -428,7 +428,7 @@ class Islice_extended_Test(unittest.TestCase):
             # fmt: on
         ]):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorSize = 10
@@ -448,7 +448,7 @@ class Islice_extended_Test(unittest.TestCase):
             [None, -7, -3, -1, 1, 3, 7],                        # step
         )):
             # remove nullcontext() for more details...but pay a dear execution time price in VSCode
-            with self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
+            with nullcontext() or self.subTest(f"index:{index:04d} start:{start} stop:{stop} step:{step}"):
 
                 # arrange
                 iteratorSize = 10
