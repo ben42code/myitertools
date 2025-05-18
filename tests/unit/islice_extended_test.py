@@ -374,7 +374,7 @@ class Islice_extended_Test(unittest.TestCase):
                     pass
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
 
     def test_withStartStopStepWithSingleConsumption_releaseItemsReferences_extensive(self):
         for index, (start, stop, step) in enumerate(itertools.product(
@@ -400,7 +400,7 @@ class Islice_extended_Test(unittest.TestCase):
                     pass
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
 
     def test_withStartStopStepWithFullConsumption_releaseItemsReferences_readable(self):
         for index, (start, stop, step, expectedWeakReferencesValidity) in enumerate([
@@ -439,7 +439,7 @@ class Islice_extended_Test(unittest.TestCase):
                 list(islice_iterator)
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
 
     def test_withStartStopStepWithFullConsumption_releaseItemsReferences_extensive(self):
         for index, (start, stop, step) in enumerate(itertools.product(
@@ -461,7 +461,7 @@ class Islice_extended_Test(unittest.TestCase):
                 list(islice_iterator)
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, iterator.weakReferencesValidityPerIndex())
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
 
 
 if __name__ == '__main__':
