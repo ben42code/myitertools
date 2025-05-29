@@ -1,6 +1,6 @@
 import itertools
 from collections import deque
-from typing import Iterable, Iterator, TypeVar
+from typing import Iterable, Iterator, Optional, TypeVar
 
 __all__ = ["islice_extended"]
 
@@ -31,40 +31,21 @@ def islice_extended(iterable: Iterable[T], *args) -> Iterator[T]:
             - by start+1 if if start and stop are positive and step is negative.
             - until StopIteration is raised if start or stop are negative.
     """
-    rawSlice = slice(*args)
+    rawSlice: slice = slice(*args)
 
-    step = 1 if rawSlice.step is None else rawSlice.step.__int__()
+    step: int = 1 if rawSlice.step is None else int(rawSlice.step)
 
     if step == 0:
         raise ValueError("step argument must not be 0")
 
     if rawSlice.start is None:
-        start = 0 if step > 0 else -1
+        start: int = 0 if step > 0 else -1
     else:
-        start = rawSlice.start.__index__()
+        start: int = rawSlice.start.__index__()
 
-    stop = None if rawSlice.stop is None else rawSlice.stop.__index__()
+    stop: Optional[int] = None if rawSlice.stop is None else rawSlice.stop.__index__()
 
-    sanitizedSlice = slice(start, stop, step)
-
-    # Didn't enable this performance optimization since it would lead to non intuitive behavior when the input is an iterator.
-    # It would also be really hard to predict the final state when the input is an iterator (not an iterable).
-    # Latest itertools.islice documentation is now explicit on that matter.
-    # Behavior consistency is more important than performance in this case.
-
-    # def sameSign(x, y):
-    #     return (x >= 0) == (y >= 0)
-
-    # if sanitizedSlice.stop is not None and sameSign(sanitizedSlice.start, sanitizedSlice.stop):
-    #     # early stop when we are guaranteed to have no elements to return
-    #     # stop index is before start index and step is positive
-    #     # ex: (5,2,1), (-2,-5,1)
-    #     if sanitizedSlice.step > 0 and sanitizedSlice.stop <= sanitizedSlice.start:
-    #         return
-    #     # stop index is after start index and step is negative
-    #     # ex: (2,5,-1),(-5,-2,-1)
-    #     if sanitizedSlice.step < 0 and sanitizedSlice.start <= sanitizedSlice.stop:
-    #         return
+    sanitizedSlice: slice = slice(start, stop, step)
 
     if sanitizedSlice.start < 0 or (sanitizedSlice.stop is not None and sanitizedSlice.stop < 0):
         # we need to retrieve the whole content
@@ -78,6 +59,8 @@ def islice_extended(iterable: Iterable[T], *args) -> Iterator[T]:
         newDataSource = None
 
     if newDataSource is not None:
+        # only keep that the elements that will be returned
+        # and store them in a deque to be able to release them asap
         newDataSource = deque(newDataSource[rawSlice])
         while len(newDataSource) > 0:
             yield newDataSource.popleft()
