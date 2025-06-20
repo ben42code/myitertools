@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import gc
 import itertools
+import platform
 import unittest
 import weakref
 from collections import deque
 from contextlib import nullcontext
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, NamedTuple
 from unittest.mock import Mock
 
 from ben42code.myitertools import islice_extended
@@ -35,28 +37,17 @@ def normalizeSlice(iterableSize, start, stop, step):
 
 class IteratorWithWeakReferences:
     """
-    A custom iterator class that maintains weak references to its elements.
-    This class is designed to iterate over a collection of objects while also
-    keeping track of weak references to those objects. It can be used to monitor
-    the validity of the objects lifecycle during the iteration process.
-    Methods:
-        FROM_SIZE(size: int) -> IteratorWithWeakReferences:
-            A class method to create an instance of the iterator with a specified
-            number of `AnObject` instances.
-        weakReferencesValidityPerIndex() -> List[bool]:
-            Returns a list of booleans indicating the validity of the weak references
-            for each element in the original iterable.
-    Inner Classes:
-        AnObject:
-            A placeholder class used to create objects for the iterator.
+    A class that wraps an iterator and provides weak references to its elements.
+    This class allows iteration over a collection of objects while maintaining
+    weak references to the original objects. It can be used to track the validity
+    of the objects (i.e., whether they are still alive or has been deleted).
     """
-
-    class AnObject:
+    class _AnObj:
         pass
 
     @classmethod
     def FROM_SIZE(cls, size: int) -> IteratorWithWeakReferences:
-        return cls([IteratorWithWeakReferences.AnObject() for _ in range(size)])
+        return cls([IteratorWithWeakReferences._AnObj() for _ in range(size)])
 
     def __init__(self, iterable: Iterable):
         self._data = deque(element for element in iterable)
@@ -65,13 +56,15 @@ class IteratorWithWeakReferences:
     def __iter__(self) -> Iterator:
         return self
 
-    def __next__(self) -> AnObject:
-        if (len(self._data) == 0):
+    def __next__(self) -> object:
+        if len(self._data) == 0:
             raise StopIteration
-
         return self._data.popleft()
 
-    def weakReferencesValidityPerIndex(self) -> list[bool]:
+    def weakReferencesState(self) -> list[bool]:
+        # CPython does reference counting.
+        # GC is not required when ref counting is supported.
+        platform.python_implementation() == 'CPython' or gc.collect()
         return [wr() is not None for wr in self._weakReferences]
 
 
@@ -374,7 +367,8 @@ class Islice_extended_Test(unittest.TestCase):
                     pass
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
+                # converting list[bool] to list[int] for readability in case of failure
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesState())))
 
     def test_withStartStopStepWithSingleConsumption_releaseItemsReferences_extensive(self):
         for index, (start, stop, step) in enumerate(itertools.product(
@@ -390,7 +384,7 @@ class Islice_extended_Test(unittest.TestCase):
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
                 expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step, numberOfElements=1)
                 expectedReturnedIndexes = set(list(range(10))[start:stop:step][1:None])
-                expectedWeakReferencesValidity = list(map(lambda index: (index in expectedReturnedIndexes) if index < expectedConsumedElements else True, range(iteratorSize)))
+                expectedWeakReferencesValidity = list(map(lambda index: int(index in expectedReturnedIndexes) if index < expectedConsumedElements else 1, range(iteratorSize)))
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
@@ -400,7 +394,8 @@ class Islice_extended_Test(unittest.TestCase):
                     pass
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
+                # converting list[bool] to list[int] for readability in case of failure
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesState())))
 
     def test_withStartStopStepWithFullConsumption_releaseItemsReferences_readable(self):
         for index, (start, stop, step, expectedWeakReferencesValidity) in enumerate([
@@ -439,7 +434,8 @@ class Islice_extended_Test(unittest.TestCase):
                 list(islice_iterator)
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
+                # converting list[bool] to list[int] for readability in case of failure
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesState())))
 
     def test_withStartStopStepWithFullConsumption_releaseItemsReferences_extensive(self):
         for index, (start, stop, step) in enumerate(itertools.product(
@@ -454,14 +450,124 @@ class Islice_extended_Test(unittest.TestCase):
                 iteratorSize = 10
                 iterator = IteratorWithWeakReferences.FROM_SIZE(size=iteratorSize)
                 expectedConsumedElements = expectedIterationsForNElements(iteratorSize, start, stop, step)
-                expectedWeakReferencesValidity = list(map(lambda index: index >= expectedConsumedElements, range(iteratorSize)))
+                expectedWeakReferencesValidity = list(map(lambda index: int(index >= expectedConsumedElements), range(iteratorSize)))
 
                 # act
                 islice_iterator = islice_extended(iterator, start, stop, step)
                 list(islice_iterator)
 
                 # assert
-                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesValidityPerIndex())))  # converting list[bool] to list[int] for readability in case of failure
+                # converting list[bool] to list[int] for readability in case of failure
+                self.assertListEqual(expectedWeakReferencesValidity, list(map(int, iterator.weakReferencesState())))
+
+    def test_elements_lifecycle(self):
+        class TestCase(NamedTuple):
+            initialSize: int
+            slice: int
+            # list of expected intermediate elements states (alive or not)
+            # during a complete iteration
+            expectedAliveStates: list[list[int]]
+
+        # fmt: off
+        testCases = [
+            # testcases for: start>0, stop>0, step>0
+            TestCase(initialSize=3, slice=(None, None, 1), expectedAliveStates=[  # noqa: E501
+                [1, 1, 1], [0, 1, 1], [0, 0, 1], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(0, None, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 1], [0, 0, 1], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(1, 2, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 0, 1], [0, 0, 1]]),
+            TestCase(initialSize=4, slice=(0, None, 2), expectedAliveStates=[
+                [1, 1, 1, 1], [0, 1, 1, 1], [0, 0, 0, 1], [0, 0, 0, 0]]),
+            TestCase(initialSize=5, slice=(1, 4, 2), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 1, 1, 1], [0, 0, 0, 0, 1], [0, 0, 0, 0, 1]]),  # noqa: E501
+            TestCase(initialSize=5, slice=(4, 1, 1), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 0, 0, 1]]),
+
+            # FYI: to process a negative start/stop index, we need to iterate
+            # on the whole iterator. All the elements will be consumed
+            # and will ALWAYS be released on full iteration completion.
+
+            # testcases for: start<0, stop>0, step>0
+            TestCase(initialSize=3, slice=(-3, None, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 1], [0, 0, 1], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(-2, 2, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=4, slice=(-4, None, 2), expectedAliveStates=[
+                [1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            TestCase(initialSize=5, slice=(-4, 4, 2), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]),  # noqa: E501
+            TestCase(initialSize=3, slice=(-2, 0, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 0, 0]]),
+
+            # testcases for: start>0, stop<0, step>0
+            TestCase(initialSize=3, slice=(None, -1, 1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=4, slice=(1, -1, 1), expectedAliveStates=[
+                [1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+            TestCase(initialSize=5, slice=(None, -2, 2), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]),  # noqa: E501
+            TestCase(initialSize=5, slice=(1, -1, 2), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]),  # noqa: E501
+            TestCase(initialSize=5, slice=(4, -5, 2), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]),
+
+            # testcases for: start>0, stop>0, step<0
+            TestCase(initialSize=3, slice=(None, None, -1), expectedAliveStates=[  # noqa: E501
+                [1, 1, 1], [1, 1, 0], [1, 0, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(2, None, -1), expectedAliveStates=[
+                [1, 1, 1], [1, 1, 0], [1, 0, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(None, 0, -1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=6, slice=(3, 1, -1), expectedAliveStates=[
+                [1, 1, 1, 1, 1, 1], [0, 0, 1, 0, 1, 1], [0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 1, 1]]),  # noqa: E501
+            TestCase(initialSize=5, slice=(1, 3, -1), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 1, 1, 1]]),
+
+            # testcases for: start<0, stop>0, step<0
+            TestCase(initialSize=3, slice=(-1, None, -1), expectedAliveStates=[
+                [1, 1, 1], [1, 1, 0], [1, 0, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(-1, 0, -1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=6, slice=(-2, None, -2), expectedAliveStates=[
+                [1, 1, 1, 1, 1, 1], [1, 0, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]),  # noqa: E501
+            TestCase(initialSize=6, slice=(-2, 1, -2), expectedAliveStates=[
+                [1, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]),  # noqa: E501
+            TestCase(initialSize=6, slice=(-4, 4, -2), expectedAliveStates=[
+                [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0]]),
+
+            # testcases for: start>0, stop<0, step<0
+            TestCase(initialSize=3, slice=(None, -3, -1), expectedAliveStates=[
+                [1, 1, 1], [0, 1, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=3, slice=(None, -4, -1), expectedAliveStates=[
+                [1, 1, 1], [1, 1, 0], [1, 0, 0], [0, 0, 0], [0, 0, 0]]),
+            TestCase(initialSize=5, slice=(3, -4, -1), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]),   # noqa: E501
+            TestCase(initialSize=5, slice=(1, -1, -1), expectedAliveStates=[
+                [1, 1, 1, 1, 1], [0, 0, 0, 0, 0]]),
+        ]
+        # fmt: on
+
+        for index, testCase in enumerate(testCases):
+            with self.subTest(f"{index:02d}", testCase=testCase):
+                iterator = IteratorWithWeakReferences.FROM_SIZE(
+                    testCase.initialSize
+                )
+                islice_iterator = islice_extended(iterator, *testCase.slice)
+
+                aliveStates = []
+                # initial alive states
+                aliveStates.append(iterator.weakReferencesState())
+                while True:
+                    try:
+                        next(islice_iterator)
+                        # intermediate alive states
+                        aliveStates.append(iterator.weakReferencesState())
+                    except StopIteration:
+                        # final alive states
+                        aliveStates.append(iterator.weakReferencesState())
+                        break
+                self.assertEqual(aliveStates, testCase.expectedAliveStates)
 
 
 if __name__ == '__main__':
