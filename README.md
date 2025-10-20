@@ -17,3 +17,7 @@ Ouput:
 ```
 Result: [9, 8, 7, 6]
 ```
+---
+[![PyPI Downloads](https://static.pepy.tech/badge/ben42code-myitertools)](https://pepy.tech/projects/ben42code-myitertools)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/ben42code.myitertools)](https://pypistats.org/packages/ben42code.myitertools)
+
