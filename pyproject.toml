@@ -4,13 +4,14 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "ben42code.myitertools"
-version = "0.0.5"
+version = "0.0.6"
 authors = [
-  { email="ben42code+myitertools@gmail.com" },
+  { name = "Ben42Code", email="ben42code+myitertools@gmail.com" },
 ]
 description = "Providing some additional capabilities on top of itertools."
 readme = "README.md"
 requires-python = ">=3.9"
+keywords = ["itertools", "python", "utilities", "iterators","islice"]
 dependencies = []
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -22,3 +23,5 @@ license-files = ["LICEN[CS]E*"]
 
 [project.urls]
 Homepage = "https://github.com/ben42code/myitertools"
+GitHub = "https://github.com/ben42code/myitertools"
+PyPI = "https://pypi.org/project/ben42code.myitertools/"
