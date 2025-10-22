@@ -93,3 +93,23 @@ Edit the `requirements.txt` file. Only add the explicit dependency you need, not
 - Want to start with a clean slate:
     - `pip freeze > clean_dependencies.txt`
     - `pip uninstall -r clean_dependencies.txt -y`
+
+## Package project
+
+- [python packaging documentation](https://packaging.python.org/en/latest/tutorials/packaging-projects/)
+
+1. `python -m pip install --upgrade build` Install/Update the `build` package.
+2. `python -m build` Build the package. Artifacts are located in `dist` folder.
+```
+    Directory: D:\code\myproject\dist
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a----        12/12/2012     12:34           4321 myproject-0.0.6-py3-none-any.whl
+-a----        12/12/2012     12:34           3421 myproject-0.0.6.tar.gz
+```
+3. Test locally your package by installing it locally in any project of your choice  
+`pip install myproject-0.0.6.tar.gz`
+
+
