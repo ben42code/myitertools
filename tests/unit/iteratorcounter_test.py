@@ -7,16 +7,16 @@ from ben42code.myitertools import IteratorCounter
 
 
 def build_IterableMock(iterator: Iterator) -> Mock:
-    IteratorMock = Mock()
-    IteratorMock.__iter__ = Mock(return_value=iterator)
-    return IteratorMock
+    iterableMock = Mock()
+    iterableMock.__iter__ = Mock(return_value=iterator)
+    return iterableMock
 
 
 def build_IteratorMock(side_effect) -> Mock:
-    IteratorMock = Mock()
-    IteratorMock.__iter__ = Mock(return_value=IteratorMock)
-    IteratorMock.__next__ = Mock(side_effect=side_effect)
-    return IteratorMock
+    iteratorMock = Mock()
+    iteratorMock.__iter__ = Mock(return_value=iteratorMock)
+    iteratorMock.__next__ = Mock(side_effect=side_effect)
+    return iteratorMock
 
 
 class TestIteratorCounter(unittest.TestCase):

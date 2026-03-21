@@ -14,11 +14,11 @@ from ben42code.myitertools import islice_extended
 
 
 def build_IteratorMock(side_effect) -> Mock:
-    IteratorMock = Mock()
-    IteratorMock.__iter__ = Mock(return_value=IteratorMock)
-    IteratorMock.__next__ = Mock(side_effect=side_effect)
+    iteratorMock = Mock()
+    iteratorMock.__iter__ = Mock(return_value=iteratorMock)
+    iteratorMock.__next__ = Mock(side_effect=side_effect)
 
-    return IteratorMock
+    return iteratorMock
 
 
 def normalizeSlice(iterableSize, start, stop, step):
