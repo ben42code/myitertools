@@ -177,7 +177,7 @@ class Islice_extended_Test(unittest.TestCase):
         iteratorMock = build_IteratorMock(range(10))
         slicedIterator = islice_extended(iteratorMock, None)
         list(slicedIterator)    # consume the whole iterator
-        iteratorMock.__next__.call_count = 0
+        iteratorMock.__next__.reset_mock()
 
         # assert
         with self.assertRaises(StopIteration):
