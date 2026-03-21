@@ -111,10 +111,10 @@ class TestIteratorCounter(unittest.TestCase):
             TestCase(input_data=[10, 20, 30]),
             TestCase(input_data=[]),
         ]
-        for index, input_data in enumerate(test_cases):
-            with self.subTest(index=index, input_data=input_data):
+        for index, test_case in enumerate(test_cases):
+            with self.subTest(index=index, test_case=test_case):
                 # arrange
-                iteratorMock = build_IteratorMock(input_data)
+                iteratorMock = build_IteratorMock(test_case.input_data)
                 counterIterator = IteratorCounter(iteratorMock)
                 iteratorMock.__iter__.reset_mock()
 
@@ -122,9 +122,9 @@ class TestIteratorCounter(unittest.TestCase):
                 list(counterIterator)
 
                 # assert
-                self.assertEqual(counterIterator.count, len(input_data))
+                self.assertEqual(counterIterator.count, len(test_case.input_data))
                 self.assertEqual(iteratorMock.__iter__.call_count, 0)
-                self.assertEqual(iteratorMock.__next__.call_count, len(input_data) + 1)
+                self.assertEqual(iteratorMock.__next__.call_count, len(test_case.input_data) + 1)
 
                 # arrange
                 iteratorMock.__next__.reset_mock()
@@ -134,7 +134,7 @@ class TestIteratorCounter(unittest.TestCase):
                     next(counterIterator)
 
                 # assert
-                self.assertEqual(counterIterator.count, len(input_data))
+                self.assertEqual(counterIterator.count, len(test_case.input_data))
                 self.assertEqual(iteratorMock.__iter__.call_count, 0)
                 self.assertEqual(iteratorMock.__next__.call_count, 1)
 
