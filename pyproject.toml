@@ -10,7 +10,7 @@ authors = [
 ]
 description = "Providing some additional capabilities on top of itertools."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["itertools", "python", "utilities", "iterators","islice"]
 dependencies = []
 classifiers = [
