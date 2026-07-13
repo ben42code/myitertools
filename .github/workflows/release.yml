@@ -81,7 +81,9 @@ jobs:
       # Tag the exact commit that produced this build for traceability. Dev and
       # rc dispatches get a unique vX.Y.Z.devN / vX.Y.ZrcN tag; release builds
       # reuse the existing release tag (vX.Y.Z or vX.Y.ZrcN), so tagging is
-      # skipped.
+      # skipped. Dry-run dispatches build only and must stay side-effect free,
+      # so no tag is pushed for them.
+      if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
       env:
         TAG: v${{ steps.version.outputs.value }}
       run: |
