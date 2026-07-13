@@ -145,6 +145,86 @@ class TestVersionTool(unittest.TestCase):
                     set_version(path, "42")
                 self.assertEqual(path.read_text(), original)
 
+    def test_setReleaseVersion_withMatchingFinalTag_writesVersion(self):
+        # arrange
+        path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+        # act
+        result = version_tool.set_release_version(path, "v0.0.6", prerelease=False)
+
+        # assert
+        self.assertEqual(result, "0.0.6")
+        self.assertIn('version = "0.0.6"', path.read_text())
+
+    def test_setReleaseVersion_withMatchingRcTag_writesVersion(self):
+        # arrange
+        path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+        # act
+        result = version_tool.set_release_version(path, "v0.0.6rc1", prerelease=True)
+
+        # assert
+        self.assertEqual(result, "0.0.6rc1")
+        self.assertIn('version = "0.0.6rc1"', path.read_text())
+
+    def test_setReleaseVersion_withInvalidTag_raisesSystemExit(self):
+        cases = [
+            ("0.0.6", False),          # missing 'v' prefix
+            ("vnot-a-version", False),  # invalid PEP 440
+            ("v0.0.6.rc1", True),      # non-canonical rc separator
+            ("v0.0.6-rc1", True),      # non-canonical rc separator
+            ("v0.0.7", False),         # base mismatch (final)
+            ("v0.0.7rc1", True),       # base mismatch (prerelease)
+            ("v0.0.6rc1", False),      # rc tag for a final release
+            ("v0.0.6", True),          # final tag for a pre-release
+            ("v0.0.6b1", True),        # beta is not a release candidate
+            ("v0.0.6a1", True),        # alpha is not a release candidate
+            ("v0.0.6rc1.dev1", True),  # dev segment on a pre-release
+            ("v0.0.6rc1.post1", True),  # post segment on a pre-release
+            ("v0.0.6rc1+local", True),  # local segment on a pre-release
+        ]
+        for tag, prerelease in cases:
+            with self.subTest(tag=tag, prerelease=prerelease):
+                # arrange
+                path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+                # act / assert
+                with self.assertRaises(SystemExit):
+                    version_tool.set_release_version(path, tag, prerelease=prerelease)
+                self.assertIn('version = "0.0.6"', path.read_text())
+
+    def test_main_setRelease_rewritesVersion(self):
+        cases = [
+            ([], "v0.0.6", "0.0.6"),
+            (["--prerelease"], "v0.0.6rc1", "0.0.6rc1"),
+        ]
+        for flag, tag, expected in cases:
+            with self.subTest(flag=flag):
+                # arrange
+                path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+                # act
+                version_tool.main(["prog", "set-release", tag, str(path)] + flag)
+
+                # assert
+                self.assertIn(f'version = "{expected}"', path.read_text())
+
+    def test_main_setRelease_withWrongArgCount_raisesSystemExit(self):
+        # arrange
+        path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+        # act / assert
+        with self.assertRaises(SystemExit):
+            version_tool.main(["prog", "set-release", str(path)])
+
+    def test_main_setRelease_withUnknownFlag_raisesSystemExit(self):
+        # arrange
+        path = self._writePyproject('[project]\nversion = "0.0.6"\n')
+
+        # act / assert
+        with self.assertRaises(SystemExit):
+            version_tool.main(["prog", "set-release", "v0.0.6", str(path), "--bogus"])
+
     def test_main_get_printsVersion(self):
         # arrange
         path = self._writePyproject('[project]\nversion = "0.0.6"\n')

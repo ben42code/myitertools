@@ -19,11 +19,11 @@ on:
     types: [published]
   workflow_dispatch:
     inputs:
-      target:
-        description: "Where to publish"
+      kind:
+        description: "Test build kind (dev→TestPyPI, rc→PyPI)"
         type: choice
-        options: [testpypi, pypi]
-        default: testpypi
+        options: [dev, rc]
+        default: dev
       dry_run:
         description: "Build only, do not publish"
         type: boolean
@@ -43,19 +43,28 @@ jobs:
     - name: Install version tooling
       run: |
         python -m pip install --upgrade pip
-        pip install tomlkit==0.15.0
+        pip install tomlkit==0.15.0 packaging==25.0
+    - name: Set version from release tag
+      # A published GitHub Release publishes the tag-derived version: full
+      # releases as vX.Y.Z, pre-releases as vX.Y.ZrcN. version_tool validates the
+      # tag (canonical PEP 440, base matching pyproject, rc-only pre-releases)
+      # and fails fast on any mismatch before anything is built or published.
+      if: github.event_name == 'release'
+      env:
+        TAG: ${{ github.event.release.tag_name }}
+        PRERELEASE_FLAG: ${{ github.event.release.prerelease && '--prerelease' || '' }}
+      run: python .github/scripts/version_tool.py set-release "$TAG" pyproject.toml $PRERELEASE_FLAG
     - name: Set dev version for TestPyPI builds
       # TestPyPI rejects re-uploading an existing version, so any build destined
       # for it gets a unique .devN suffix (PEP 440) — this covers pushes to main
-      # and manual dispatches targeting testpypi. Full releases keep the pinned
-      # version from pyproject.toml for PyPI.
-      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
+      # and manual dev dispatches.
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.kind == 'dev')
       run: python .github/scripts/version_tool.py set-dev ${{ github.run_number }} pyproject.toml
-    - name: Set release candidate version for pre-releases
-      # A GitHub pre-release is published to PyPI as a PEP 440 release candidate
+    - name: Set release candidate version for rc dispatches
+      # A manual rc dispatch is published to PyPI as a PEP 440 release candidate
       # (base version + rcN, where N is the run number for uniqueness). pip hides
       # release candidates from default installs unless users pass --pre.
-      if: github.event_name == 'release' && github.event.release.prerelease
+      if: github.event_name == 'workflow_dispatch' && inputs.kind == 'rc'
       run: python .github/scripts/version_tool.py set-rc ${{ github.run_number }} pyproject.toml
     - name: Build distributions
       run: |
@@ -69,9 +78,10 @@ jobs:
         VERSION=$(python .github/scripts/version_tool.py get pyproject.toml)
         echo "value=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Tag the build commit
-      # Tag the exact commit that produced this build for traceability. Dev
-      # builds get a unique vX.Y.Z.devN tag; pinned builds reuse vX.Y.Z, which
-      # may already exist (e.g. for a release) — in that case tagging is skipped.
+      # Tag the exact commit that produced this build for traceability. Dev and
+      # rc dispatches get a unique vX.Y.Z.devN / vX.Y.ZrcN tag; release builds
+      # reuse the existing release tag (vX.Y.Z or vX.Y.ZrcN), so tagging is
+      # skipped.
       env:
         TAG: v${{ steps.version.outputs.value }}
       run: |
@@ -101,10 +111,10 @@ jobs:
       run: gh release upload "$TAG" dist/* --clobber
 
   publish-testpypi-job:
-    # Pushes to main always publish here; manual dispatches do so when
-    # target=testpypi and dry_run is disabled.
+    # Pushes to main always publish here; manual dev dispatches do so when
+    # dry_run is disabled.
     needs: build-job
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' && inputs.dry_run == false)
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.kind == 'dev' && inputs.dry_run == false)
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -125,10 +135,10 @@ jobs:
 
   publish-pypi-job:
     # Any published GitHub Release goes to PyPI: pre-releases as rcN release
-    # candidates, full releases as the pinned version. Manual dispatches do so
-    # when target=pypi and dry_run is disabled.
+    # candidates, full releases as the pinned version. Manual rc dispatches also
+    # publish here (as rcN) when dry_run is disabled.
     needs: build-job
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi' && inputs.dry_run == false)
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.kind == 'rc' && inputs.dry_run == false)
     runs-on: ubuntu-latest
     environment:
       name: pypi
