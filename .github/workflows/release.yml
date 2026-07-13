@@ -1,0 +1,145 @@
+# Publishes distributions to TestPyPI / PyPI using OIDC Trusted Publishing
+# (no API tokens stored as secrets).
+#
+# One-time manual setup required before this workflow can publish:
+#   1. Register a Trusted Publisher on PyPI (https://pypi.org/manage/account/publishing/):
+#        Owner: ben42code | Repository: myitertools
+#        Workflow: release.yml | Environment: pypi
+#   2. Register a Trusted Publisher on TestPyPI (https://test.pypi.org/manage/account/publishing/):
+#        same owner/repository/workflow | Environment: testpypi
+#   3. Create the GitHub environments (Settings > Environments): pypi and testpypi.
+#      Names must match the registrations above and the `environment:` blocks below.
+#      Add protection rules (e.g. required reviewers) on `pypi` as desired.
+# See https://docs.pypi.org/trusted-publishers/ for details.
+name: publish-release-actions
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+      dry_run:
+        description: "Build only, do not publish"
+        type: boolean
+        default: true
+
+jobs:
+  build-job:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to push the build tag
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install version tooling
+      run: |
+        python -m pip install --upgrade pip
+        pip install tomlkit==0.15.0
+    - name: Set dev version for TestPyPI builds
+      # TestPyPI rejects re-uploading an existing version, so any build destined
+      # for it gets a unique .devN suffix (PEP 440) — this covers pushes to main
+      # and manual dispatches targeting testpypi. Full releases keep the pinned
+      # version from pyproject.toml for PyPI.
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
+      run: python .github/scripts/version_tool.py set-dev ${{ github.run_number }} pyproject.toml
+    - name: Set release candidate version for pre-releases
+      # A GitHub pre-release is published to PyPI as a PEP 440 release candidate
+      # (base version + rcN, where N is the run number for uniqueness). pip hides
+      # release candidates from default installs unless users pass --pre.
+      if: github.event_name == 'release' && github.event.release.prerelease
+      run: python .github/scripts/version_tool.py set-rc ${{ github.run_number }} pyproject.toml
+    - name: Build distributions
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+        python -m build
+    - name: Resolve build version
+      id: version
+      run: |
+        set -euo pipefail
+        VERSION=$(python .github/scripts/version_tool.py get pyproject.toml)
+        echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+    - name: Tag the build commit
+      # Tag the exact commit that produced this build for traceability. Dev
+      # builds get a unique vX.Y.Z.devN tag; pinned builds reuse vX.Y.Z, which
+      # may already exist (e.g. for a release) — in that case tagging is skipped.
+      env:
+        TAG: v${{ steps.version.outputs.value }}
+      run: |
+        if [ -n "$(git ls-remote --tags origin "refs/tags/$TAG")" ]; then
+          echo "::notice::Tag $TAG already exists, skipping"
+        else
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
+          echo "::notice::Created tag $TAG on $GITHUB_SHA"
+        fi
+    - name: Upload distributions
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Attach distributions to the GitHub Release
+      # Publish the built wheel/sdist as assets on the release page. Only for
+      # full releases: their version matches the tag (vX.Y.Z), and they are the
+      # durable artifacts. Pre-releases are transient and already on PyPI
+      # (installable via pip --pre). --clobber makes re-runs idempotent.
+      if: github.event_name == 'release' && !github.event.release.prerelease
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: gh release upload "$TAG" dist/* --clobber
+
+  publish-testpypi-job:
+    # Pushes to main always publish here; manual dispatches do so when
+    # target=testpypi and dry_run is disabled.
+    needs: build-job
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' && inputs.dry_run == false)
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/ben42code.myitertools/
+    permissions:
+      id-token: write  # required for TestPyPI Trusted Publishing (OIDC)
+    steps:
+    - name: Download distributions
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish to TestPyPI
+      # repository-url overrides the action's default (PyPI) to target TestPyPI.
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi-job:
+    # Any published GitHub Release goes to PyPI: pre-releases as rcN release
+    # candidates, full releases as the pinned version. Manual dispatches do so
+    # when target=pypi and dry_run is disabled.
+    needs: build-job
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi' && inputs.dry_run == false)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ben42code.myitertools/
+    permissions:
+      id-token: write  # required for PyPI Trusted Publishing (OIDC)
+    steps:
+    - name: Download distributions
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
