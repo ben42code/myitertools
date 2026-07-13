@@ -25,8 +25,8 @@ Get it from https://www.python.org/downloads/
     If your [venv](https://docs.python.org/3/library/venv.html#creating-virtual-environments) is enable, it should return something like: `.venv\Scripts\python.exe`
 - Upgrade `pip`  
 `python -m pip install --upgrade pip`
-- Install the dependencies with [pip](https://pip.pypa.io/en/stable/cli/pip_install/):  
-`pip install -r requirements.txt`
+- Install the package and its development dependencies with [pip](https://pip.pypa.io/en/stable/cli/pip_install/):  
+`pip install -e .[dev]`
 - Run it!  
 `python.exe -m examples.main main`
 
@@ -84,11 +84,15 @@ https://code.visualstudio.com/
     https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml
 
 ## Keep dependencies up-to-date
+Dependencies are declared in `pyproject.toml` under `[project.optional-dependencies]`
+(`dev` for the full development environment, `release` for the version tooling used by
+the release workflow). `pyproject.toml` is the single source of truth — there is no
+`requirements.txt`.
 - Keep track of your dependencies:  
     - `pip list` List all the installed dependencies...meaning all the dependencies you've explicitly installed and their implicit dependencies)  
     - `pip freeze` Same as `pip list`, but respecting the [requirements](https://pip.pypa.io/en/stable/reference/requirements-file-format/) file format
 - Update dependencies  
-Edit the `requirements.txt` file. Only add the explicit dependency you need, not their internal/recursive dependencies. To not lose your sanity, you may want to install [pip-chill](https://pypi.org/project/pip-chill/) and/or [pipdeptree](https://pypi.org/project/pipdeptree/).
+Edit the relevant group in `pyproject.toml`. Only add the explicit dependency you need, not their internal/recursive dependencies. To not lose your sanity, you may want to install [pip-chill](https://pypi.org/project/pip-chill/) and/or [pipdeptree](https://pypi.org/project/pipdeptree/).
 - Check if your dependencies have all they need: `pip check`
 - Want to start with a clean slate:
     - `pip freeze > clean_dependencies.txt`

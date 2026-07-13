@@ -21,6 +21,24 @@ classifiers = [
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 
+[project.optional-dependencies]
+# Version tooling for the release workflow (.github/scripts/version_tool.py).
+# Kept as a focused group so CI can install just these without the full dev set.
+release = [
+    "tomlkit==0.15.0",
+    "packaging==25.0",
+]
+# Full local development environment: formatting, linting, testing, and the
+# release tooling above. `packaging` (via release) is also required by the
+# VSCode unittest adapter.
+dev = [
+    "autopep8==2.0.4",
+    "isort==5.13.2",
+    "coverage==7.5.1",
+    "flake8==7.1.0",
+    "ben42code.myitertools[release]",
+]
+
 [project.urls]
 Homepage = "https://github.com/ben42code/myitertools"
 GitHub = "https://github.com/ben42code/myitertools"
