@@ -43,7 +43,7 @@ jobs:
     - name: Install version tooling
       run: |
         python -m pip install --upgrade pip
-        pip install tomlkit==0.15.0 packaging==25.0
+        pip install .[release]
     - name: Set version from release tag
       # A published GitHub Release publishes the tag-derived version: full
       # releases as vX.Y.Z, pre-releases as vX.Y.ZrcN. version_tool validates the
