@@ -32,9 +32,24 @@ Get it from https://www.python.org/downloads/
 
 # Development Environment
 ## Tests
+### Test layout
+Tests are split by subject:
+- `tests/unit/` — **product** tests for the library itself (`ben42code.myitertools`). These
+  import the package as an installed user would (`from ben42code.myitertools import ...`),
+  so they validate whatever copy is on `sys.path` (editable install or a published wheel).
+- `tests/tooling/` — **tooling/infra** tests for the release scripts (e.g.
+  `.github/scripts/version_tool.py`). These are unrelated to the shipped package.
+
+Running only the product tests against a clean install verifies the published artifact:  
+`python -m unittest discover -v -s "tests/unit" -p "*_test.py" -t "."`
+
 ### Run tests
-- All the tests:  
+- All the tests (product + tooling):  
 `python -m unittest discover -v -s "tests" -p "*_test.py" -t "."`
+- Product tests only:  
+`python -m unittest discover -v -s "tests/unit" -p "*_test.py" -t "."`
+- Tooling tests only:  
+`python -m unittest discover -v -s "tests/tooling" -p "*_test.py" -t "."`
 - A test file:  
 `python -m unittest -v 'tests.unit.islice_extended_test'`
 - A test class:  
