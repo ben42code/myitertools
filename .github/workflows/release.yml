@@ -34,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # required to push the build tag
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
     - uses: actions/checkout@v7
     - name: Set up Python
@@ -155,3 +157,66 @@ jobs:
         path: dist/
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+
+  smoke-test-testpypi-job:
+    # Post-publish smoke test: install the freshly published package from TestPyPI
+    # and run the product test suite against that installed artifact (not the
+    # source tree) to confirm it is importable and functional. Skipped whenever
+    # the TestPyPI publish is skipped (dry runs, rc/release events).
+    needs: [build-job, publish-testpypi-job]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+    - name: Install published package from TestPyPI
+      # No source install (editable or '.') — only the published wheel, so the
+      # tests exercise exactly what users would get. A retry loop absorbs the
+      # short index-propagation delay after publishing.
+      env:
+        VERSION: ${{ needs.build-job.outputs.version }}
+      run: |
+        python -m pip install --upgrade pip
+        for attempt in $(seq 1 10); do
+          if pip install --no-cache-dir --index-url https://test.pypi.org/simple/ --pre "ben42code.myitertools==$VERSION"; then
+            echo "::notice::Installed ben42code.myitertools==$VERSION from TestPyPI"
+            exit 0
+          fi
+          echo "::notice::Attempt $attempt: $VERSION not available on TestPyPI yet, retrying in 15s"
+          sleep 15
+        done
+        echo "::error::ben42code.myitertools==$VERSION not installable from TestPyPI after retries"
+        exit 1
+    - name: Run product tests against the installed package
+      run: python -m unittest discover -v -s "tests/unit" -p "*_test.py" -t "."
+
+  smoke-test-pypi-job:
+    # Post-publish smoke test for PyPI: same contract as the TestPyPI smoke test.
+    # Skipped whenever the PyPI publish is skipped (dry runs, dev events).
+    needs: [build-job, publish-pypi-job]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+    - name: Install published package from PyPI
+      env:
+        VERSION: ${{ needs.build-job.outputs.version }}
+      run: |
+        python -m pip install --upgrade pip
+        for attempt in $(seq 1 10); do
+          if pip install --no-cache-dir --pre "ben42code.myitertools==$VERSION"; then
+            echo "::notice::Installed ben42code.myitertools==$VERSION from PyPI"
+            exit 0
+          fi
+          echo "::notice::Attempt $attempt: $VERSION not available on PyPI yet, retrying in 15s"
+          sleep 15
+        done
+        echo "::error::ben42code.myitertools==$VERSION not installable from PyPI after retries"
+        exit 1
+    - name: Run product tests against the installed package
+      run: python -m unittest discover -v -s "tests/unit" -p "*_test.py" -t "."
