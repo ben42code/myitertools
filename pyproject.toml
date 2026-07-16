@@ -43,3 +43,4 @@ dev = [
 Homepage = "https://github.com/ben42code/myitertools"
 GitHub = "https://github.com/ben42code/myitertools"
 PyPI = "https://pypi.org/project/ben42code.myitertools/"
+Changelog = "https://github.com/ben42code/myitertools/blob/main/CHANGELOG.md"
