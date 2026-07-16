@@ -204,7 +204,10 @@ class TestVersionTool(unittest.TestCase):
                 path = self._writePyproject('[project]\nversion = "0.0.6"\n')
 
                 # act
-                version_tool.main(["prog", "set-release", tag, str(path)] + flag)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    version_tool.main(
+                        ["prog", "set-release", tag, str(path)] + flag
+                    )
 
                 # assert
                 self.assertIn(f'version = "{expected}"', path.read_text())
@@ -245,7 +248,8 @@ class TestVersionTool(unittest.TestCase):
                 path = self._writePyproject('[project]\nversion = "0.0.6"\n')
 
                 # act
-                version_tool.main(["prog", command, "5", str(path)])
+                with contextlib.redirect_stdout(io.StringIO()):
+                    version_tool.main(["prog", command, "5", str(path)])
 
                 # assert
                 self.assertIn(f'version = "{expected}"', path.read_text())
