@@ -21,6 +21,20 @@ Requires Python 3.10+.
 > [doctests](https://docs.python.org/3/library/doctest.html) by the test suite,
 > so they are guaranteed to stay in sync with the code.
 
+## Stability
+
+This project follows [Semantic Versioning](https://semver.org/).
+
+The public API is exactly the names exported from `ben42code.myitertools`
+(`islice_extended`, `IteratorCounter`, `StreamSequence`). Anything else —
+including the underscore-prefixed modules — is internal and may change without
+notice.
+
+⚠️ **Pre-1.0:** while the version is `0.x`, the public API may still change in
+backwards-incompatible ways between minor releases. Pin a version
+(`ben42code.myitertools==0.0.6`) if you need stability. Once `1.0.0` ships,
+breaking changes will only occur in major releases.
+
 ## `islice_extended`
 ```python
 islice_extended(iterable: Iterable[T], stop: int | None) -> Iterator[T]

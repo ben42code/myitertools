@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- README "Stability" section documenting the SemVer policy, the exact public
+  API surface, and the pre-1.0 compatibility caveat.
+
 ## [0.0.6] - 2026-07-17
 
 ### Added
