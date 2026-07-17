@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-07-17
+
 ### Added
 - `IteratorCounter`: a transparent wrapper that counts the values pulled
   through an iterator/iterable, without changing what flows downstream (#17).
@@ -39,5 +41,6 @@ documented here.
 - `islice_extended`: an `itertools.islice` variant that accepts negative
   `start`/`stop` indices and a negative `step`. Supports Python >= 3.9.
 
-[Unreleased]: https://github.com/ben42code/myitertools/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/ben42code/myitertools/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/ben42code/myitertools/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/ben42code/myitertools/releases/tag/v0.0.5
