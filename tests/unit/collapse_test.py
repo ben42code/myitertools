@@ -1,5 +1,6 @@
 import itertools
 import unittest
+from collections.abc import Iterator
 from typing import NamedTuple
 
 from ben42code.myitertools import IteratorCounter, collapse
@@ -15,34 +16,73 @@ class Collapse_Test(unittest.TestCase):
     def test_alreadyFlat_returnsSameValues(self):
         self.assertEqual(list(collapse([1, 2, 3])), [1, 2, 3])
 
-    def test_nested_flattensDepthFirst(self):
-        self.assertEqual(list(collapse([1, [2, 3], 4])), [1, 2, 3, 4])
+    def test_nesting_flattensDepthFirst(self):
+        class TestCase(NamedTuple):
+            source: list
+            expected: list
 
-    def test_deeplyNested_flattensDepthFirst(self):
-        source = [1, [2, [3, [4, 5], 6], 7], 8]
-        self.assertEqual(list(collapse(source)), [1, 2, 3, 4, 5, 6, 7, 8])
+        testcases = [
+            TestCase(source=[1, [2, 3], 4],
+                     expected=[1, 2, 3, 4]),
+            TestCase(source=[[1, 2], 3, 4],                 # nested first child
+                     expected=[1, 2, 3, 4]),
+            TestCase(source=[1, 2, [3, 4]],                 # nested last child
+                     expected=[1, 2, 3, 4]),
+            TestCase(source=[[1, 2], 3, [4, 5]],            # nested first and last
+                     expected=[1, 2, 3, 4, 5]),
+            TestCase(source=[[[1]], 2, [[3]]],              # nested at both ends, deeper
+                     expected=[1, 2, 3]),
+            TestCase(source=[1, [2, [3, [4, 5], 6], 7], 8],
+                     expected=[1, 2, 3, 4, 5, 6, 7, 8]),
+            TestCase(source=[1, (2, 3), [4, iter([5, 6])], range(7, 9)],
+                     expected=[1, 2, 3, 4, 5, 6, 7, 8]),
+        ]
+        for testcase in testcases:
+            with self.subTest(testcase):
+                self.assertEqual(list(collapse(testcase.source)), testcase.expected)
 
-    def test_mixedIterableTypes_flattened(self):
-        source = [1, (2, 3), [4, iter([5, 6])], range(7, 9)]
-        self.assertEqual(list(collapse(source)), [1, 2, 3, 4, 5, 6, 7, 8])
+    def test_emptyIterables_skipped(self):
+        class TestCase(NamedTuple):
+            source: list
+            expected: list
 
-    def test_empty_yieldsNothing(self):
-        self.assertEqual(list(collapse([])), [])
-
-    def test_nestedEmpties_yieldsNothing(self):
-        self.assertEqual(list(collapse([[], [[]], [[], []]])), [])
+        testcases = [
+            TestCase(source=[],
+                     expected=[]),
+            TestCase(source=[[], [[]], [[], []]],
+                     expected=[]),
+            TestCase(source=[[], 1, []],                    # empties around a leaf
+                     expected=[1]),
+            TestCase(source=[[], [1, 2], []],               # empties around a nested list
+                     expected=[1, 2]),
+            TestCase(source=[1, [], 2, [[]], 3],            # empties interleaved with leaves
+                     expected=[1, 2, 3]),
+            TestCase(source=[[[], 1], [2, []]],             # empty as first/last within nesting
+                     expected=[1, 2]),
+        ]
+        for testcase in testcases:
+            with self.subTest(testcase):
+                self.assertEqual(list(collapse(testcase.source)), testcase.expected)
 
     def test_nonIterableLeaves_yielded(self):
         marker = object()
         self.assertEqual(list(collapse([1, None, marker])), [1, None, marker])
 
-    def test_string_keptWholeByDefault(self):
-        self.assertEqual(list(collapse([1, "AB", 2])), [1, "AB", 2])
+    def test_defaultAtoms_keptWhole(self):
+        class TestCase(NamedTuple):
+            source: list
+            expected: list
 
-    def test_bytes_keptWholeByDefault(self):
-        self.assertEqual(list(collapse([1, b"AB", 2])), [1, b"AB", 2])
+        testcases = [
+            TestCase(source=[1, "AB", 2], expected=[1, "AB", 2]),
+            TestCase(source=[1, b"AB", 2], expected=[1, b"AB", 2]),
+        ]
+        for testcase in testcases:
+            with self.subTest(testcase):
+                self.assertEqual(list(collapse(testcase.source)), testcase.expected)
 
     def test_atomsEmpty_bytesExpandToInts(self):
+        # bytes only: atoms=() on a str would not terminate (chars stay str).
         self.assertEqual(list(collapse([1, b"AB", 2], atoms=())), [1, 65, 66, 2])
 
     def test_atomsCustom_treatsTypeAsLeaf(self):
@@ -79,9 +119,9 @@ class Collapse_Test(unittest.TestCase):
         result = list(collapse(source, handlers=handlers, atoms=()))
         self.assertEqual(result, [1, 2, 65, 66, 3])
 
-    def test_returnsLazyIterator(self):
+    def test_returnsIterator(self):
         result = collapse([1, [2, 3]])
-        self.assertNotIsInstance(result, list)
+        self.assertIsInstance(result, Iterator)
         self.assertEqual(next(result), 1)
 
     def test_construction_pullsNothing(self):
