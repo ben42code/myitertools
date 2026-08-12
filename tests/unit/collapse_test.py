@@ -198,21 +198,36 @@ class Collapse_Test(unittest.TestCase):
         self.assertEqual(list(collapse([deep])), [0])
 
     def test_bytePayload_fromComposedConstants(self):
-        # Assemble a byte payload from nested 7-bit control constants that are
-        # themselves composed from other constants (a common protocol pattern).
         ESC = 0x1B
-        HEADER = [ESC, 0x3A]
-        FRAME = [HEADER, 0x73]
+        SEP = 0x13
+        PRO2 = [ESC, 0x3A]
+        PRO3 = [ESC, 0x3B]
+        MIXTE1 = [0x32, 0x7D]
+        TELINFO = [0x31, 0x7D]
+        PRO2_MIXTE1 = [PRO2, MIXTE1]
+        PRO2_TELINFO = [PRO2, TELINFO]
+        PRO3_REP_STATUS_KEYBOARD = [PRO3, 0x73]
+        CSI_VIDEOTEX_TO_MIXTE = [SEP, 0x70]
 
-        class TestCase(NamedTuple):
+        class PayloadCase(NamedTuple):
             source: list
             payload: bytes
 
         testcases = [
-            TestCase(source=[HEADER], payload=bytes([0x1B, 0x3A])),
-            TestCase(source=[FRAME], payload=bytes([0x1B, 0x3A, 0x73])),
-            TestCase(source=[10, "AB", [11, b"\x01\x02", 19], 20],
-                     payload=bytes([10, 65, 66, 11, 1, 2, 19, 20])),
+            PayloadCase(
+                source=[PRO2_MIXTE1, CSI_VIDEOTEX_TO_MIXTE],
+                payload=bytes([0x1B, 0x3A, 0x32, 0x7D, 0x13, 0x70]),
+            ),
+            PayloadCase(
+                source=[PRO3_REP_STATUS_KEYBOARD, 0x51, b"\x01\x02"],
+                payload=bytes([0x1B, 0x3B, 0x73, 0x51, 0x01, 0x02]),
+            ),
+            PayloadCase(
+                source=[10, "AB", [PRO2_TELINFO, [11, b"\x01\x02"]], 20],
+                payload=bytes([
+                    10, 65, 66, 0x1B, 0x3A, 0x31, 0x7D, 11, 1, 2, 20
+                ]),
+            ),
         ]
 
         handlers = {str: lambda s: s.encode("ascii")}
@@ -220,6 +235,12 @@ class Collapse_Test(unittest.TestCase):
             with self.subTest(testcase):
                 result = bytes(collapse(testcase.source, handlers=handlers, atoms=()))
                 self.assertEqual(result, testcase.payload)
+
+    def test_bytePayload_withNonAsciiText_raisesUnicodeEncodeError(self):
+        handlers = {str: lambda s: s.encode("ascii")}
+        result = collapse([0x1B, "café"], handlers=handlers, atoms=())
+        with self.assertRaises(UnicodeEncodeError):
+            bytes(result)
 
     def test_atomOnSubtype_excludesFromParentHandler(self):
         base, derived = Base(1), Derived(2)
