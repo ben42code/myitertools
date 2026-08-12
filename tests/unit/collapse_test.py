@@ -1,3 +1,4 @@
+import abc
 import itertools
 import unittest
 from collections.abc import Iterator
@@ -11,9 +12,51 @@ class Case(NamedTuple):
     expected: list
 
 
+# --- test fixtures ---
+
 class Tag:
     def __init__(self, text: str):
         self.text = text
+
+
+class Base:
+    def __init__(self, value):
+        self.value = value
+
+
+class Derived(Base):
+    pass
+
+
+class Drawable(abc.ABC):
+    pass
+
+
+class Point:
+    def __init__(self, value):
+        self.value = value
+
+
+Drawable.register(Point)               # virtual subclass: Drawable is not in Point.__mro__
+
+
+class Alpha(abc.ABC):
+    pass
+
+
+class Beta(abc.ABC):
+    pass
+
+
+class Gamma:
+    pass
+
+
+# Virtual registration makes both issubclass checks true without adding either
+# ABC to Gamma.__mro__. Since Alpha and Beta are unrelated, singledispatch has
+# no inheritance order by which it can prefer one registration over the other.
+Alpha.register(Gamma)
+Beta.register(Gamma)
 
 
 class Collapse_Test(unittest.TestCase):
@@ -99,8 +142,9 @@ class Collapse_Test(unittest.TestCase):
         result = list(collapse([10, Tag("AB"), 20], handlers=handlers, atoms=()))
         self.assertEqual(result, [10, 65, 66, 20])
 
-    def test_handler_takesPrecedenceOverAtoms(self):
-        # str is an atom by default, but a str handler must still win.
+    def test_handlerForDefaultAtomType_overridesDefault(self):
+        # str is a default atom, but registering a str handler drops that
+        # default so the handler applies instead.
         handlers = {str: lambda s: [ord(c) for c in s]}
         result = list(collapse([1, "AB", 2], handlers=handlers))
         self.assertEqual(result, [1, 65, 66, 2])
@@ -176,6 +220,45 @@ class Collapse_Test(unittest.TestCase):
             with self.subTest(testcase):
                 result = bytes(collapse(testcase.source, handlers=handlers, atoms=()))
                 self.assertEqual(result, testcase.payload)
+
+    def test_atomOnSubtype_excludesFromParentHandler(self):
+        base, derived = Base(1), Derived(2)
+        handlers = {Base: lambda b: [b.value]}
+        result = list(collapse([base, derived], handlers=handlers, atoms=(Derived,)))
+        self.assertEqual(result, [1, derived])   # base transformed, derived kept whole
+
+    def test_handlerOnSubtype_overridesParentAtom(self):
+        base, derived = Base(1), Derived(2)
+        handlers = {Derived: lambda d: [d.value]}
+        result = list(collapse([base, derived], handlers=handlers, atoms=(Base,)))
+        self.assertEqual(result, [base, 2])      # base kept whole, derived transformed
+
+    def test_mostSpecificHandlerWins_orderIndependent(self):
+        # Both registration orders must resolve a Derived to the Derived handler.
+        for handlers in (
+            {Base: lambda b: [1], Derived: lambda d: [2]},
+            {Derived: lambda d: [2], Base: lambda b: [1]},
+        ):
+            with self.subTest(order=[t.__name__ for t in handlers]):
+                self.assertEqual(list(collapse([Derived(0)], handlers=handlers)), [2])
+
+    def test_abcVirtualSubclass_resolvedByHandler(self):
+        # Point is a virtual subclass of Drawable (not in its MRO).
+        handlers = {Drawable: lambda d: [d.value]}
+        result = list(collapse([1, Point(7), 2], handlers=handlers, atoms=()))
+        self.assertEqual(result, [1, 7, 2])
+
+    def test_explicitAtomHandlerConflict_raisesValueError(self):
+        with self.assertRaises(ValueError):
+            collapse([1], handlers={str: lambda s: s}, atoms=(str,))
+
+    def test_ambiguousResolution_raisesValueError(self):
+        # Gamma virtually matches both unrelated handler types, so neither is
+        # more specific. Resolution is lazy; the error occurs during iteration.
+        handlers = {Alpha: lambda x: [1], Beta: lambda x: [2]}
+        result = collapse([Gamma()], handlers=handlers, atoms=())
+        with self.assertRaises(ValueError):
+            list(result)
 
 
 if __name__ == '__main__':
