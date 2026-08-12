@@ -6,6 +6,11 @@ from typing import NamedTuple
 from ben42code.myitertools import IteratorCounter, collapse
 
 
+class Case(NamedTuple):
+    source: list
+    expected: list
+
+
 class Tag:
     def __init__(self, text: str):
         self.text = text
@@ -14,68 +19,60 @@ class Tag:
 class Collapse_Test(unittest.TestCase):
 
     def test_alreadyFlat_returnsSameValues(self):
-        self.assertEqual(list(collapse([1, 2, 3])), [1, 2, 3])
+        result = list(collapse([1, 2, 3]))
+        self.assertEqual(result, [1, 2, 3])
 
     def test_nesting_flattensDepthFirst(self):
-        class TestCase(NamedTuple):
-            source: list
-            expected: list
-
         testcases = [
-            TestCase(source=[1, [2, 3], 4],
-                     expected=[1, 2, 3, 4]),
-            TestCase(source=[[1, 2], 3, 4],                 # nested first child
-                     expected=[1, 2, 3, 4]),
-            TestCase(source=[1, 2, [3, 4]],                 # nested last child
-                     expected=[1, 2, 3, 4]),
-            TestCase(source=[[1, 2], 3, [4, 5]],            # nested first and last
-                     expected=[1, 2, 3, 4, 5]),
-            TestCase(source=[[[1]], 2, [[3]]],              # nested at both ends, deeper
-                     expected=[1, 2, 3]),
-            TestCase(source=[1, [2, [3, [4, 5], 6], 7], 8],
-                     expected=[1, 2, 3, 4, 5, 6, 7, 8]),
-            TestCase(source=[1, (2, 3), [4, iter([5, 6])], range(7, 9)],
-                     expected=[1, 2, 3, 4, 5, 6, 7, 8]),
+            Case(source=[1, [2, 3], 4],
+                 expected=[1, 2, 3, 4]),
+            Case(source=[[1, 2], 3, 4],                 # nested first child
+                 expected=[1, 2, 3, 4]),
+            Case(source=[1, 2, [3, 4]],                 # nested last child
+                 expected=[1, 2, 3, 4]),
+            Case(source=[[1, 2], 3, [4, 5]],            # nested first and last
+                 expected=[1, 2, 3, 4, 5]),
+            Case(source=[[[1]], 2, [[3]]],              # nested at both ends, deeper
+                 expected=[1, 2, 3]),
+            Case(source=[1, [2, [3, [4, 5], 6], 7], 8],
+                 expected=[1, 2, 3, 4, 5, 6, 7, 8]),
+            Case(source=[1, (2, 3), [4, iter([5, 6])], range(7, 9)],
+                 expected=[1, 2, 3, 4, 5, 6, 7, 8]),
         ]
         for testcase in testcases:
-            with self.subTest(testcase):
-                self.assertEqual(list(collapse(testcase.source)), testcase.expected)
+            with self.subTest(source=testcase.source):
+                result = list(collapse(testcase.source))
+                self.assertEqual(result, testcase.expected)
 
     def test_emptyIterables_skipped(self):
-        class TestCase(NamedTuple):
-            source: list
-            expected: list
-
         testcases = [
-            TestCase(source=[],
-                     expected=[]),
-            TestCase(source=[[], [[]], [[], []]],
-                     expected=[]),
-            TestCase(source=[[], 1, []],                    # empties around a leaf
-                     expected=[1]),
-            TestCase(source=[[], [1, 2], []],               # empties around a nested list
-                     expected=[1, 2]),
-            TestCase(source=[1, [], 2, [[]], 3],            # empties interleaved with leaves
-                     expected=[1, 2, 3]),
-            TestCase(source=[[[], 1], [2, []]],             # empty as first/last within nesting
-                     expected=[1, 2]),
+            Case(source=[],
+                 expected=[]),
+            Case(source=[[], [[]], [[], []]],
+                 expected=[]),
+            Case(source=[[], 1, []],                    # empties around a leaf
+                 expected=[1]),
+            Case(source=[[], [1, 2], []],               # empties around a nested list
+                 expected=[1, 2]),
+            Case(source=[1, [], 2, [[]], 3],            # empties interleaved with leaves
+                 expected=[1, 2, 3]),
+            Case(source=[[[], 1], [2, []]],             # empty as first/last within nesting
+                 expected=[1, 2]),
         ]
         for testcase in testcases:
-            with self.subTest(testcase):
-                self.assertEqual(list(collapse(testcase.source)), testcase.expected)
+            with self.subTest(source=testcase.source):
+                result = list(collapse(testcase.source))
+                self.assertEqual(result, testcase.expected)
 
     def test_nonIterableLeaves_yielded(self):
         marker = object()
-        self.assertEqual(list(collapse([1, None, marker])), [1, None, marker])
+        result = list(collapse([1, None, marker]))
+        self.assertEqual(result, [1, None, marker])
 
     def test_defaultAtoms_keptWhole(self):
-        class TestCase(NamedTuple):
-            source: list
-            expected: list
-
         testcases = [
-            TestCase(source=[1, "AB", 2], expected=[1, "AB", 2]),
-            TestCase(source=[1, b"AB", 2], expected=[1, b"AB", 2]),
+            Case(source=[1, "AB", 2], expected=[1, "AB", 2]),
+            Case(source=[1, b"AB", 2], expected=[1, b"AB", 2]),
         ]
         for testcase in testcases:
             with self.subTest(testcase):
@@ -151,18 +148,20 @@ class Collapse_Test(unittest.TestCase):
             deep = [deep]
         self.assertEqual(list(collapse([deep])), [0])
 
-    def test_minitelLike_composedConstants(self):
+    def test_bytePayload_fromComposedConstants(self):
+        # Assemble a byte payload from nested 7-bit control constants that are
+        # themselves composed from other constants (a common protocol pattern).
         ESC = 0x1B
-        PRO2 = [ESC, 0x3A]
-        PRO2_REP_STATUS_VITESSE = [PRO2, 0x73]
+        HEADER = [ESC, 0x3A]
+        FRAME = [HEADER, 0x73]
 
         class TestCase(NamedTuple):
             source: list
             payload: bytes
 
         testcases = [
-            TestCase(source=[PRO2], payload=bytes([0x1B, 0x3A])),
-            TestCase(source=[PRO2_REP_STATUS_VITESSE], payload=bytes([0x1B, 0x3A, 0x73])),
+            TestCase(source=[HEADER], payload=bytes([0x1B, 0x3A])),
+            TestCase(source=[FRAME], payload=bytes([0x1B, 0x3A, 0x73])),
             TestCase(source=[10, "AB", [11, b"\x01\x02", 19], 20],
                      payload=bytes([10, 65, 66, 11, 1, 2, 19, 20])),
         ]
