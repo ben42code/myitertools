@@ -110,6 +110,11 @@ class Collapse_Test(unittest.TestCase):
         result = list(collapse([Tag("AB"), Tag("CDE")], handlers=handlers))
         self.assertEqual(result, [2, 3])
 
+    def test_handler_returningEmpty_dropsElement(self):
+        handlers = {Tag: lambda t: []}
+        result = list(collapse([1, Tag("x"), 2], handlers=handlers))
+        self.assertEqual(result, [1, 2])
+
     def test_handler_appliesAtAnyDepth(self):
         handlers = {str: lambda s: s.encode("ascii")}
         source = [1, [2, "AB"], 3]
