@@ -119,7 +119,7 @@ still consuming the source lazily.
 
 ## `collapse`
 ```python
-collapse(iterable: Iterable, *, handlers: Mapping[type, Callable[[Any], Iterable]] | None = None, atoms: tuple[type, ...] = (str, bytes)) -> Iterator
+collapse(iterable: Iterable, *, handlers: Mapping[type, Callable[[Any], Iterable]] | None = None, atoms: tuple[type, ...] | None = None) -> Iterator
 ```
 Lazily flatten an arbitrarily nested iterable into a stream of leaves, pulling
 from the source only as far as the consumer requests — with optional per-type
@@ -139,10 +139,12 @@ b'\nAB\x0b\x0c'
 
 **Notes**
 - Fully lazy: a nested source is walked depth-first and pulled only as far as needed, so it stays safe under `islice` on an unbounded/deeply nested stream.
-- `handlers={type: fn}` — a matching element is replaced by `fn(element)` and the result is flattened *in turn* (re-matched against `handlers`), enabling chains like `str → bytes → ints`. Handlers take precedence over `atoms`.
-- `atoms` (default `(str, bytes)`) are yielded whole instead of being iterated into, so text is not exploded into characters; pass `atoms=()` to expand them.
+- `handlers={type: fn}` — a matching element is replaced by `fn(element)` and the result is flattened *in turn* (re-resolved), enabling chains like `str → bytes → ints`.
+- `atoms` are yielded whole instead of being iterated into; when omitted it defaults to `(str, bytes)` so text is not exploded into characters. Pass an explicit tuple (e.g. `atoms=()`) to override.
+- A type may be an atom *or* a handler, not both. When an element matches several registered types, the **most specific one wins** (by MRO, abstract base classes included) — independent of declaration order.
+- Overlapping an explicit `atoms` entry with a handler raises `ValueError` (overriding a *default* atom with a handler is allowed); an element matching two unrelated registered types resolves ambiguously and raises `ValueError`.
 - Uses an explicit stack rather than recursion, so arbitrarily deep nesting cannot raise `RecursionError`.
-- ⚠️ A handler that maps a type back to the same type (e.g. `str → str`) never terminates.
+- ⚠️ A handler may not terminate if its output keeps resolving to a handled type (e.g. a `str` handler that keeps returning `str` values).
 
 ---
 [![PyPI version](https://img.shields.io/pypi/v/ben42code.myitertools)](https://pypi.org/project/ben42code.myitertools/)
