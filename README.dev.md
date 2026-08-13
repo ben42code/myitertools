@@ -131,4 +131,73 @@ Mode                 LastWriteTime         Length Name
 3. Test locally your package by installing it locally in any project of your choice  
 `pip install myproject-0.0.6.tar.gz`
 
+# Release
+Publishing is handled by the `publish-release-actions` workflow
+(`.github/workflows/release.yml`). It uses [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
+(OIDC) — no API tokens are stored as secrets.
+
+## Version scheme
+`[project].version` in `pyproject.toml` is the single source of truth for the
+**base** version. The workflow never invents a base version: it only appends a
+[PEP 440](https://peps.python.org/pep-0440/) suffix, via
+`.github/scripts/version_tool.py`.
+
+| Trigger | Version published | Index |
+| --- | --- | --- |
+| Push to `main` | `X.Y.Z.devN` (`N` = run number) | TestPyPI |
+| Manual dispatch, `kind: dev` | `X.Y.Z.devN` | TestPyPI |
+| Manual dispatch, `kind: rc` | `X.Y.ZrcN` | PyPI |
+| GitHub Release, pre-release | tag `vX.Y.ZrcN` | PyPI |
+| GitHub Release, full | tag `vX.Y.Z` | PyPI |
+
+The `.devN`/`rcN` suffixes exist because package indexes reject re-uploading an
+existing version, so every build needs a unique one. `pip` hides release
+candidates from default installs unless users pass `--pre`. Every published build
+is tagged (`vX.Y.Z.devN`, `vX.Y.ZrcN`, `vX.Y.Z`) on the exact commit that
+produced it, for traceability.
+
+A published GitHub Release is the *only* way to ship a final version. Its tag is
+validated before anything is built: it must be `v` + a canonical PEP 440 version
+whose base matches `pyproject.toml`, and pre-releases must be release candidates.
+A mismatch fails the run.
+
+## Bump the version
+Right after a version is published, bump the base version so subsequent dev/rc
+builds no longer collide with the released one:
+- Edit `[project].version` in `pyproject.toml` (e.g. `0.0.6` -> `0.0.7`).
+- Land it on `main` as its own change.
+
+## Publish a final release
+1. **Land the work** on `main` and confirm the repo is healthy there (tests,
+coverage, linter).
+2. **Prepare the release commit** on `main`:
+    - `CHANGELOG.md`: rename the `## [Unreleased]` section to
+    `## [X.Y.Z] - <YYYY-MM-DD>`, add a fresh empty `Unreleased` section, and
+    update the link references at the bottom of the file.
+    - `README.md`: bump the pinned version in the "Stability" section.
+    - `pyproject.toml`: must already be at `X.Y.Z` (see *Bump the version*).
+3. **Dry run** ***[OPTIONAL]***  
+Run the workflow manually (`workflow_dispatch`) with `dry_run: true` to build
+without publishing or tagging.
+4. **Release candidate** ***[OPTIONAL]***  
+Run the workflow manually with `kind: rc` and `dry_run: false` to publish
+`X.Y.ZrcN` to PyPI, then validate it:  
+`pip install --pre ben42code.myitertools==X.Y.ZrcN`
+5. **Publish** — create a GitHub Release on `main`, tagged `vX.Y.Z`, *not*
+marked as a pre-release:  
+`gh release create vX.Y.Z --target main --title "vX.Y.Z" --notes-from-tag`
+6. **Bump** the base version to the next one (see *Bump the version*).
+
+The workflow then builds the distributions, publishes them to PyPI, attaches the
+wheel/sdist to the GitHub Release, and runs a smoke test that installs the
+published package and runs the product tests against it.
+
+## One-time setup
+Already done for this repo, listed here for reference — see the comment header of
+`.github/workflows/release.yml` for details:
+- A Trusted Publisher registered on [PyPI](https://pypi.org/manage/account/publishing/)
+and [TestPyPI](https://test.pypi.org/manage/account/publishing/), pointing at
+this repo and `release.yml`.
+- Matching GitHub environments (`pypi`, `testpypi`) under *Settings > Environments*.
+
 
