@@ -17,6 +17,7 @@ Run the following checks and report results in a summary table:
 
 ## Linting
 - Run: `python -m flake8 .`
+- Run: `python -m isort --check-only --diff .`
 - Report any violations
 
 ## Summary
