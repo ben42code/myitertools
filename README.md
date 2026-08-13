@@ -33,7 +33,7 @@ without notice.
 
 ⚠️ **Pre-1.0:** while the version is `0.x`, the public API may still change in
 backwards-incompatible ways between minor releases. Pin a version
-(`ben42code.myitertools==0.0.6`) if you need stability. Once `1.0.0` ships,
+(`ben42code.myitertools==0.0.7`) if you need stability. Once `1.0.0` ships,
 breaking changes will only occur in major releases.
 
 ## `islice_extended`
