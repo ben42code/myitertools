@@ -16,3 +16,4 @@ jobs:
     - name: Tests
       run: |
         python -m flake8 .
+        python -m isort --check-only --diff .

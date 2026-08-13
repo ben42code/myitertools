@@ -80,6 +80,14 @@ Running only the product tests against a clean install verifies the published ar
 
 You may also access [`flake8`](https://pypi.org/project/flake8/) from [VSCode](https://code.visualstudio.com/) if you installed [flake 8 extension](https://marketplace.visualstudio.com/items?itemName=ms-python.flake8)
 
+### Import sorting
+[`isort`](https://pypi.org/project/isort/) is part of the installed packages and is
+enforced in CI. It is configured under `[isort]` in `setup.cfg`.
+- Check the repo: `python -m isort --check-only --diff .`
+- Fix the imports in place: `python -m isort .`
+
+You may also access [`isort`](https://pypi.org/project/isort/) from [VSCode](https://code.visualstudio.com/) if you installed [isort extension](https://marketplace.visualstudio.com/items?itemName=ms-python.isort), which sorts imports on save.
+
 ## IDE
 - Install VSCode:  
 https://code.visualstudio.com/
@@ -89,6 +97,8 @@ https://code.visualstudio.com/
     https://marketplace.visualstudio.com/items?itemName=ms-python.autopep8
     - Install Python Linter: (***[REQUIRED]*** to edit code)  
     https://marketplace.visualstudio.com/items?itemName=ms-python.flake8
+    - Install Python import sorter: (***[REQUIRED]*** to edit code)  
+    https://marketplace.visualstudio.com/items?itemName=ms-python.isort
     - Install command variable: (Used for some configurations in `launch.json`)***[OPTIONAL]***  
     https://marketplace.visualstudio.com/items?itemName=rioj7.command-variable
     - Install TODO extension to see pending work: ***[OPTIONAL]***  

@@ -21,12 +21,6 @@
         "editor.wordBasedSuggestions": "off",
     },
     "autopep8.args": [],
-    "isort.args": [
-        "--profile",
-        "black",
-        "--line-length",
-        "200"
-    ],
     "autopep8.importStrategy": "fromEnvironment",
     "isort.importStrategy": "fromEnvironment",
     "python.analysis.extraPaths":[
