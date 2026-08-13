@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `collapse`: lazily flatten nested iterables, with per-type `handlers` and an
+  `atoms` option, resolved most-specific-first (MRO/ABC aware).
 - README "Stability" section documenting the SemVer policy, the exact public
   API surface, and the pre-1.0 compatibility caveat.
 

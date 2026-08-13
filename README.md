@@ -16,6 +16,7 @@ Requires Python 3.10+.
 | [`islice_extended`](#islice_extended) | `itertools.islice` with negative `start`/`stop`/`step` support. |
 | [`IteratorCounter`](#iteratorcounter) | Transparent wrapper that counts the values pulled through it. |
 | [`StreamSequence`](#streamsequence) | A lazy `Sequence` view (`len`, indexing, slicing) over a one-shot iterator. |
+| [`collapse`](#collapse) | Lazily flatten arbitrarily nested iterables, with per-type customisation. |
 
 > The `>>>` examples below are executed as
 > [doctests](https://docs.python.org/3/library/doctest.html) by the test suite,
@@ -26,9 +27,9 @@ Requires Python 3.10+.
 This project follows [Semantic Versioning](https://semver.org/).
 
 The public API is exactly the names exported from `ben42code.myitertools`
-(`islice_extended`, `IteratorCounter`, `StreamSequence`). Anything else —
-including the underscore-prefixed modules — is internal and may change without
-notice.
+(`islice_extended`, `IteratorCounter`, `StreamSequence`, `collapse`). Anything
+else — including the underscore-prefixed modules — is internal and may change
+without notice.
 
 ⚠️ **Pre-1.0:** while the version is `0.x`, the public API may still change in
 backwards-incompatible ways between minor releases. Pin a version
@@ -115,6 +116,35 @@ still consuming the source lazily.
 - ⚠️ Operations that must reach the end — `len()`, negative indexing, `__contains__`/`index` on a miss, `count`, `reversed` — walk the source to exhaustion and **hang on an unbounded stream**; use them only on a bounded view.
 - Built for one-shot sources: wrapping a random-access `Sequence` (`list`, `tuple`, `range` …) only adds indirection — use it directly instead.
 - ⚠️ Not thread-safe: a `StreamSequence` and its sub-iterators need external synchronisation for concurrent use.
+
+## `collapse`
+```python
+collapse(iterable: Iterable, *, handlers: Mapping[type, Callable[[Any], Iterable]] | None = None, atoms: tuple[type, ...] | None = None) -> Iterator
+```
+Lazily flatten an arbitrarily nested iterable into a stream of leaves, pulling
+from the source only as far as the consumer requests — with optional per-type
+rules for what counts as a leaf and how to transform specific types.
+
+```python
+>>> from ben42code.myitertools import collapse
+>>> list(collapse([1, [2, [3, 4], 5], 6]))
+[1, 2, 3, 4, 5, 6]
+>>> list(collapse([1, "AB", 2]))                 # strings are kept whole by default
+[1, 'AB', 2]
+>>> handlers = {str: lambda s: s.encode("ascii")}
+>>> bytes(collapse([10, "AB", [11, 12]], handlers=handlers, atoms=()))
+b'\nAB\x0b\x0c'
+
+```
+
+**Notes**
+- Fully lazy: a nested source is walked depth-first and pulled only as far as needed, so it stays safe under `islice` on an unbounded/deeply nested stream.
+- `handlers={type: fn}` — a matching element is replaced by `fn(element)` and the result is flattened *in turn* (re-resolved), enabling chains like `str → bytes → ints`.
+- `atoms` are yielded whole instead of being iterated into; when omitted it defaults to `(str, bytes)` so text is not exploded into characters. Pass an explicit tuple (e.g. `atoms=()`) to override.
+- A type may be an atom *or* a handler, not both. When an element matches several registered types, the **most specific one wins** (by MRO, abstract base classes included) — independent of declaration order.
+- Overlapping an explicit `atoms` entry with a handler raises `ValueError` (overriding a *default* atom with a handler is allowed); an element matching two unrelated registered types resolves ambiguously and raises `ValueError`.
+- Uses an explicit stack rather than recursion, so arbitrarily deep nesting cannot raise `RecursionError`.
+- ⚠️ A handler may not terminate if its output keeps resolving to a handled type (e.g. a `str` handler that keeps returning `str` values).
 
 ---
 [![PyPI version](https://img.shields.io/pypi/v/ben42code.myitertools)](https://pypi.org/project/ben42code.myitertools/)
