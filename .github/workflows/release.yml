@@ -29,6 +29,13 @@ on:
         type: boolean
         default: true
 
+# Publishes are serialized, never cancelled: two quick merges to main would
+# otherwise race to push the same tag and upload concurrently, and cancelling a
+# run mid-publish could leave a tag without its artifacts.
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
 jobs:
   build-job:
     runs-on: ubuntu-latest

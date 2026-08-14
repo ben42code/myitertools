@@ -1,5 +1,16 @@
 name: run-lint-actions
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A PR branch is already covered by the pull_request event, so pushes are
+# narrowed to main to avoid running everything twice. Superseded runs of the
+# same branch are cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   flake8-lint-job:
     runs-on: ubuntu-latest
