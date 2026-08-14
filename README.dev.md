@@ -64,7 +64,7 @@ Running only the product tests against a clean install verifies the published ar
     - A specific unit test: `coverage run -m unittest -v 'tests.unit.islice_extended_test.Islice_extended_Test.test_withStop_expectedValues'`
 - Generate the coverage results:  
     - `coverage report`  
-    Text version of the coverage results
+    Text version of the coverage results. Fails below `fail_under = 100` (`.coveragerc`), so run it on the whole suite.
     - `coverage report --format=total`  
     Total coverage result (no details)
     - `coverage lcov`  
