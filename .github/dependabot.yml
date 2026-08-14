@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Workflow actions drift silently: nothing else pins or reconciles them.
+  # Grouped into a single PR so a bump is one small review, not one per action.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
