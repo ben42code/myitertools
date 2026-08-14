@@ -1,6 +1,6 @@
 ---
 name: repo-health-check
-description: Assess the repository state including unit tests, test coverage, linting, and Python version compatibility. Use this when asked to check repo health, quality, or status.
+description: Assess the repository state including unit tests, test coverage, linting, package build, and Python version compatibility. Use this when asked to check repo health, quality, or status.
 ---
 
 Run the following checks and report results in a summary table:
@@ -19,6 +19,11 @@ Run the following checks and report results in a summary table:
 - Run: `python -m flake8 .`
 - Run: `python -m isort --check-only --diff .`
 - Report any violations
+
+## Package Build
+- Run: `python -m build --outdir <temp dir>` (keeps the repo free of build artifacts)
+- Confirm both the wheel and the sdist are produced
+- Report any build backend or metadata error
 
 ## Summary
 Present results as a table with: check name, status (pass/fail), and details.
