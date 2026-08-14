@@ -6,7 +6,7 @@ build-backend = "flit_core.buildapi"
 name = "ben42code.myitertools"
 version = "0.0.8"
 authors = [
-  { name = "Ben42Code", email="ben42code+myitertools@gmail.com" },
+  { name = "Ben42Code", email = "ben42code+myitertools@gmail.com" },
 ]
 description = "Providing some additional capabilities on top of itertools."
 readme = "README.md"
@@ -41,8 +41,7 @@ release = [
     "packaging==25.0",
 ]
 # Full local development environment: formatting, linting, testing, and the
-# release tooling above. `packaging` (via release) is also required by the
-# VSCode unittest adapter.
+# release tooling above.
 dev = [
     "autopep8==2.0.4",
     "isort==5.13.2",
