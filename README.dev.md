@@ -127,8 +127,7 @@ Edit the relevant group in `pyproject.toml`. Only add the explicit dependency yo
 
 - [python packaging documentation](https://packaging.python.org/en/latest/tutorials/packaging-projects/)
 
-1. `python -m pip install --upgrade build` Install/Update the `build` package.
-2. `python -m build` Build the package. Artifacts are located in `dist` folder.
+1. `python -m build` Build the package. The [`build`](https://pypi.org/project/build/) frontend is part of the installed packages (`pip install -e .[dev]`). Artifacts are located in `dist` folder.
 ```
     Directory: D:\code\myproject\dist
 
@@ -138,7 +137,7 @@ Mode                 LastWriteTime         Length Name
 -a----        12/12/2012     12:34           4321 myproject-0.0.6-py3-none-any.whl
 -a----        12/12/2012     12:34           3421 myproject-0.0.6.tar.gz
 ```
-3. Test locally your package by installing it locally in any project of your choice  
+2. Test locally your package by installing it locally in any project of your choice  
 `pip install myproject-0.0.6.tar.gz`
 
 # Release
