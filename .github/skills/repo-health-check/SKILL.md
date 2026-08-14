@@ -12,7 +12,7 @@ Run the following checks and report results in a summary table:
 
 ## Test Coverage
 - Run: `coverage run -m unittest discover -s "tests" -p "*_test.py" -t "."`
-- Report: `coverage report --show-missing`
+- Report: `coverage report --show-missing` (fails below `fail_under = 100`)
 - Note any modules with less than 100% branch coverage
 
 ## Linting
