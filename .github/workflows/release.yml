@@ -36,6 +36,11 @@ concurrency:
   group: publish-release
   cancel-in-progress: false
 
+# Default for the jobs that only read the repo (the smoke tests); the build and
+# publish jobs override this with the extra scope they need.
+permissions:
+  contents: read
+
 jobs:
   build-job:
     runs-on: ubuntu-latest
