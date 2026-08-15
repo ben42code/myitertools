@@ -11,6 +11,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+# Checking out the code is all these jobs need.
+permissions:
+  contents: read
+
 jobs:
   unittests-job:
     runs-on: ubuntu-latest
