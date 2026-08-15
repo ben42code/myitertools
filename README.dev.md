@@ -145,6 +145,15 @@ Publishing is handled by the `publish-release-actions` workflow
 (`.github/workflows/release.yml`). It uses [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
 (OIDC) — no API tokens are stored as secrets.
 
+## Supported Python versions
+Nothing derives one from another, so a version change means editing all of these:
+- `.github/workflows/tests.yml` — the `python-version` matrix. The next, not yet
+released version is listed too (`allow-prereleases`), to catch breakage early.
+- `pyproject.toml` — the `Programming Language :: Python :: 3.x` classifiers,
+for the versions actually **supported** (a pre-GA version tested in CI is not
+one), and `requires-python` when the oldest supported version changes.
+- `README.md` — the stability section, if the claim changes.
+
 ## Version scheme
 `[project].version` in `pyproject.toml` is the single source of truth for the
 **base** version. The workflow never invents a base version: it only appends a
