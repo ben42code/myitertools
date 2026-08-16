@@ -22,6 +22,7 @@
     },
     "autopep8.args": [],
     "autopep8.importStrategy": "fromEnvironment",
+    "flake8.importStrategy": "fromEnvironment",
     "isort.importStrategy": "fromEnvironment",
     "python.analysis.extraPaths":[
         "${workspaceFolder}/src",
