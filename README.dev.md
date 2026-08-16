@@ -1,7 +1,8 @@
 # ben42code.myitertools
 Providing some additional capabilities on top of itertools.
 
-Feature related information: [README](README.md)
+Feature related information: [README](README.md)  
+Conventions for changes: [CONTRIBUTING](CONTRIBUTING.md)
 
 # Onboarding / Reminder
 
