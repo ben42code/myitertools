@@ -18,9 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `collapse`: lazily flatten nested iterables, with per-type `handlers` and an
-  `atoms` option, resolved most-specific-first (MRO/ABC aware).
+  `atoms` option, resolved most-specific-first (MRO/ABC aware) ([#46]).
 - README "Stability" section documenting the SemVer policy, the exact public
-  API surface, and the pre-1.0 compatibility caveat.
+  API surface, and the pre-1.0 compatibility caveat ([#44]).
 
 ## [0.0.6] - 2026-07-17
 
@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Consolidate project configuration and dependencies into `pyproject.toml`;
   remove `requirements.txt` ([#16], [#31], [#32]).
 - Expand the PyPI trove classifiers (supported Python versions, audience,
-  topics).
+  topics) ([#40]).
 - Canonicalize the package's public surface: expose exactly `islice_extended`,
   `IteratorCounter`, and `StreamSequence` via an explicit `__all__`, with the
   implementation kept in private modules ([#37], [#39]).
@@ -73,6 +73,9 @@ documented here.
 [#36]: https://github.com/ben42code/myitertools/pull/36
 [#37]: https://github.com/ben42code/myitertools/pull/37
 [#39]: https://github.com/ben42code/myitertools/pull/39
+[#40]: https://github.com/ben42code/myitertools/pull/40
+[#44]: https://github.com/ben42code/myitertools/pull/44
+[#46]: https://github.com/ben42code/myitertools/pull/46
 [#62]: https://github.com/ben42code/myitertools/pull/62
 [#64]: https://github.com/ben42code/myitertools/pull/64
 [#65]: https://github.com/ben42code/myitertools/pull/65

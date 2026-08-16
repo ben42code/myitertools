@@ -50,7 +50,8 @@ the next Python release before it ships.
   `doctest.DocFileSuite`: the VS Code Python test adapter skips the resulting
   doctest cases and errors test discovery.
 - Add an entry under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) for
-  anything user-visible.
+  anything user-visible. The pull request number is not known while you are
+  writing it — references are backfilled when the release is prepared.
 
 ## Design principles
 
