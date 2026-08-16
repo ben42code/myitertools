@@ -193,6 +193,11 @@ coverage, linter).
     - `CHANGELOG.md`: rename the `## [Unreleased]` section to
     `## [X.Y.Z] - <YYYY-MM-DD>`, add a fresh empty `Unreleased` section, and
     update the link references at the bottom of the file.
+    - `CHANGELOG.md`: add the pull request reference to each entry of the
+    release — `([#42])` in the text, with a matching
+    `[#42]: https://github.com/ben42code/myitertools/pull/42` definition at the
+    bottom. Contributors cannot add these while writing the entry, since the
+    number does not exist yet.
     - `README.md`: bump the pinned version in the "Stability" section.
     - `pyproject.toml`: must already be at `X.Y.Z` (see *Bump the version*).
 3. **Dry run** ***[OPTIONAL]***  
